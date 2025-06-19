@@ -1,0 +1,92 @@
+{
+  "welcome": {
+    "title": "Üdvözlünk\n{{bride}} és {{groom}}\nesküvőjén!",
+    "subtitle": "Segíts nekünk megörökíteni ezt a különleges napot! Készíts szórakoztató fotókat kreatív szűrőkkel, és oszd meg velünk a legszebb pillanatokat. Minden kép egy emlék, ami örökre megmarad szívünkben.",
+    "startButton": "Kezdés",
+    "galleryButton": "Galéria megtekintése",
+    "mobileUpload": "📱 Fotók feltöltése telefonról",
+    "mobileUploadDesc": "Kattints ide a képek egyszerű feltöltéséhez"
+  },
+  "camera": {
+    "permissionRequest": "Kérjük, engedélyezd a kamera használatát",
+    "photoMode": "Fotó",
+    "videoMode": "Videó",
+    "capturePhoto": "Fénykép készítése",
+    "recordVideo": "Videó felvétele",
+    "retake": "Újra",
+    "approve": "Jóváhagyás"
+  },
+  "optimization": {
+    "processing": "Kép optimalizálása...",
+    "compressing": "Tömörítés...",
+    "resizing": "Átméretezés...",
+    "converting": "Formátum konvertálás...",
+    "generating": "Előnézetek generálása...",
+    "complete": "Optimalizálás kész",
+    "error": "Optimalizálási hiba",
+    "quality": {
+      "high": "Magas minőség",
+      "medium": "Közepes minőség", 
+      "low": "Alacsony minőség"
+    },
+    "sizeBefore": "Eredeti méret: {{size}}",
+    "sizeAfter": "Optimalizált méret: {{size}}",
+    "savings": "Megtakarítás: {{percentage}}%",
+    "processing_time": "Feldolgozási idő: {{time}}s"
+  },
+  "filters": {
+    "title": "Szűrők",
+    "noFilter": "Eredeti",
+    "loading": "Szűrők betöltése...",
+    "error": "Szűrő betöltési hiba",
+    "wedding_crown": "Menyasszonyi korona",
+    "groom_hat": "Vőlegény kalap",
+    "wedding_frame": "Esküvői keret",
+    "hearts_sparkles": "Szívek és csillogás",
+    "applying": "Szűrő alkalmazása...",
+    "tapToTry": "Koppints a kipróbáláshoz"
+  },
+  "upload": {
+    "uploading": "Feltöltés...",
+    "optimizing": "Optimalizálás és feltöltés...",
+    "progress": "{{percentage}}% kész",
+    "success": "Sikeresen elmentve! Köszönjük!",
+    "error": "Hiba történt, kérjük próbáld újra",
+    "addToGallery": "Hozzáadás a galériához",
+    "filterUsed": "Használt szűrő: {{filterName}}",
+    "multipleFiles": "{{current}}/{{total}} fájl feltöltése",
+    "estimatedTime": "Becsült idő: {{time}}",
+    "retrying": "Újrapróbálás... ({{attempt}}/{{max}})"
+  },
+  "gallery": {
+    "title": "Esküvői emlékek",
+    "comingSoon": "A galéria az esküvő után lesz elérhető",
+    "empty": "Még nincsenek feltöltött emlékek",
+    "loadMore": "További betöltése",
+    "filterBy": "Szűrés:",
+    "allPhotos": "Minden fotó",
+    "withFilters": "Szűrőkkel",
+    "noFilters": "Szűrők nélkül",
+    "highQuality": "Magas minőség",
+    "optimized": "Optimalizált"
+  },
+  "admin": {
+    "login": "Admin belépés",
+    "dashboard": "Vezérlőpult",
+    "themeEditor": "Téma szerkesztő",
+    "contentManager": "Tartalom kezelő",
+    "filterAnalytics": "Szűrő statisztikák",
+    "lensManager": "Lencse kezelő",
+    "optimizationSettings": "Optimalizálási beállítások",
+    "settings": "Beállítások",
+    "filterUsage": "Szűrő használat",
+    "popularFilters": "Népszerű szűrők",
+    "enableFilter": "Szűrő engedélyezése",
+    "disableFilter": "Szűrő letiltása",
+    "storageUsage": "Tárhely használat",
+    "optimizationStats": "Optimalizálási statisztikák",
+    "averageSavings": "Átlagos megtakarítás",
+    "totalSaved": "Összesen megtakarított",
+    "processingTime": "Feldolgozási idő"
+  }
+}

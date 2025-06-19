@@ -1,0 +1,92 @@
+{
+  "welcome": {
+    "title": "Welcome to\n{{bride}}\nand {{groom}}'s Wedding!",
+    "subtitle": "Help us capture this special day! Take fun photos with creative filters and share the most beautiful moments with us. Every picture is a memory that will remain in our hearts forever.",
+    "startButton": "Get Started",
+    "galleryButton": "View Gallery",
+    "mobileUpload": "\ud83d\udcf1 Upload Photos from Phone",
+    "mobileUploadDesc": "Click here for easy photo upload"
+  },
+  "camera": {
+    "permissionRequest": "Please allow camera access",
+    "photoMode": "Photo",
+    "videoMode": "Video",
+    "capturePhoto": "Take Photo",
+    "recordVideo": "Record Video",
+    "retake": "Retake",
+    "approve": "Approve"
+  },
+  "optimization": {
+    "processing": "Optimizing image...",
+    "compressing": "Compressing...",
+    "resizing": "Resizing...",
+    "converting": "Converting format...",
+    "generating": "Generating previews...",
+    "complete": "Optimization complete",
+    "error": "Optimization error",
+    "quality": {
+      "high": "High quality",
+      "medium": "Medium quality", 
+      "low": "Low quality"
+    },
+    "sizeBefore": "Original size: {{size}}",
+    "sizeAfter": "Optimized size: {{size}}",
+    "savings": "Savings: {{percentage}}%",
+    "processing_time": "Processing time: {{time}}s"
+  },
+  "filters": {
+    "title": "Filters",
+    "noFilter": "Original",
+    "loading": "Loading filters...",
+    "error": "Filter loading error",
+    "wedding_crown": "Wedding Crown",
+    "groom_hat": "Groom Hat",
+    "wedding_frame": "Wedding Frame",
+    "hearts_sparkles": "Hearts & Sparkles",
+    "applying": "Applying filter...",
+    "tapToTry": "Tap to try"
+  },
+  "upload": {
+    "uploading": "Uploading...",
+    "optimizing": "Optimizing and uploading...",
+    "progress": "{{percentage}}% complete",
+    "success": "Successfully saved! Thank you!",
+    "error": "An error occurred, please try again",
+    "addToGallery": "Add to gallery",
+    "filterUsed": "Filter used: {{filterName}}",
+    "multipleFiles": "Uploading {{current}}/{{total}} files",
+    "estimatedTime": "Estimated time: {{time}}",
+    "retrying": "Retrying... ({{attempt}}/{{max}})"
+  },
+  "gallery": {
+    "title": "Wedding Memories",
+    "comingSoon": "Gallery will be available after the wedding",
+    "empty": "No memories uploaded yet",
+    "loadMore": "Load More",
+    "filterBy": "Filter by:",
+    "allPhotos": "All Photos",
+    "withFilters": "With Filters",
+    "noFilters": "No Filters",
+    "highQuality": "High Quality",
+    "optimized": "Optimized"
+  },
+  "admin": {
+    "login": "Admin Login",
+    "dashboard": "Dashboard",
+    "themeEditor": "Theme Editor",
+    "contentManager": "Content Manager",
+    "filterAnalytics": "Filter Analytics",
+    "lensManager": "Lens Manager",
+    "optimizationSettings": "Optimization Settings",
+    "settings": "Settings",
+    "filterUsage": "Filter Usage",
+    "popularFilters": "Popular Filters",
+    "enableFilter": "Enable Filter",
+    "disableFilter": "Disable Filter",
+    "storageUsage": "Storage Usage",
+    "optimizationStats": "Optimization Statistics",
+    "averageSavings": "Average Savings",
+    "totalSaved": "Total Saved",
+    "processingTime": "Processing Time"
+  }
+}

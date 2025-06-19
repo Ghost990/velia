@@ -1,0 +1,46 @@
+{
+  "enabled": true,
+  "filters": [
+    {
+      "id": "wedding_crown",
+      "name": "Menyasszonyi korona",
+      "description": "Gyönyörű korona szűrő",
+      "lensId": "wedding-crown-lens",
+      "category": "wedding",
+      "enabled": true,
+      "premium": false
+    },
+    {
+      "id": "groom_hat",
+      "name": "Vőlegény kalap",
+      "description": "Elegáns kalap szűrő",
+      "lensId": "groom-hat-lens",
+      "category": "wedding",
+      "enabled": true,
+      "premium": false
+    },
+    {
+      "id": "wedding_frame",
+      "name": "Esküvői keret",
+      "description": "Díszített keret szűrő",
+      "lensId": "wedding-frame-lens",
+      "category": "frame",
+      "enabled": true,
+      "premium": true
+    },
+    {
+      "id": "hearts_sparkles",
+      "name": "Szívek és csillogás",
+      "description": "Romantikus szívecskék",
+      "lensId": "hearts-sparkles-lens",
+      "category": "romantic",
+      "enabled": true,
+      "premium": false
+    }
+  ],
+  "categories": {
+    "wedding": "Esküvői",
+    "frame": "Keretek",
+    "romantic": "Romantikus"
+  }
+}

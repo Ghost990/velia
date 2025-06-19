@@ -1,0 +1,50 @@
+{
+  "image": {
+    "quality": {
+      "high": 0.9,
+      "medium": 0.8,
+      "low": 0.6,
+      "default": "medium"
+    },
+    "maxDimensions": {
+      "gallery": { "width": 1920, "height": 1080 },
+      "thumbnail": { "width": 400, "height": 400 },
+      "preview": { "width": 800, "height": 600 }
+    },
+    "formats": {
+      "preferredOutput": "webp",
+      "fallback": "jpeg",
+      "preserveOriginal": false
+    },
+    "compression": {
+      "enabled": true,
+      "aggressive": false,
+      "progressive": true,
+      "stripMetadata": true,
+      "preserveExif": false
+    },
+    "resizing": {
+      "algorithm": "lanczos",
+      "sharpening": true,
+      "maintainAspectRatio": true
+    }
+  },
+  "video": {
+    "quality": "720p",
+    "compression": 0.7,
+    "maxDuration": 30,
+    "codec": "h264"
+  },
+  "upload": {
+    "chunkSize": "1MB",
+    "maxConcurrent": 3,
+    "retryAttempts": 3,
+    "progressiveUpload": true
+  },
+  "performance": {
+    "useWebWorkers": true,
+    "batchProcessing": true,
+    "memoryLimit": "100MB",
+    "processingTimeout": 30000
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "couple": {
+    "bride": "Bogi",
+    "groom": "Zsolti",
+    "weddingDate": "2024-07-15"
+  },
+  "features": {
+    "galleryEnabled": false,
+    "galleryVisibleAfter": "2024-07-16T00:00:00Z",
+    "allowVideo": true,
+    "allowMultiplePhotos": true,
+    "requireApproval": true,
+    "filtersEnabled": true,
+    "imageOptimization": true,
+    "generateThumbnails": true,
+    "multipleFormats": true
+  },
+  "upload": {
+    "maxFileSize": "50MB",
+    "maxOptimizedSize": "5MB",
+    "allowedFormats": ["jpg", "jpeg", "png", "webp", "mp4", "mov"],
+    "autoOptimize": true,
+    "compressionQuality": "medium",
+    "generatePreviews": true
+  },
+  "storage": {
+    "folders": {
+      "originals": "originals/",
+      "optimized": "optimized/",
+      "thumbnails": "thumbnails/",
+      "previews": "previews/"
+    }
+  },
+  "social": {
+    "hashtag": "#BogiésZsolti2026",
+    "showHashtag": true
+  }
+}
