@@ -137,7 +137,7 @@ class UploadService {
         mimeType: file.type,
         fileSize: file.size,
         uploadDate: new Date(),
-        approved: true, // Temporarily auto-approve all uploads for testing
+        approved: !this.config.features?.requireApproval, // Auto-approve if not required
         showInGallery: true,
         filterUsed: null,
         likes: 0,
@@ -167,51 +167,14 @@ class UploadService {
     } catch (error) {
       // Enhanced error handling
       if (error.message?.includes('CORS') || error.code === 'storage/unknown') {
-        console.error('CORS Error Details:', error);
+        throw new Error(`Firebase Storage CORS Error: Upload blocked by CORS policy. 
         
-        // Try to work around CORS by using a different upload method
-        try {
-          console.log('Attempting alternative upload method...');
-          // Use uploadBytes instead of uploadBytesResumable as a fallback
-          const originalUpload = await uploadBytes(originalRef, file);
-          const originalUrl = await getDownloadURL(originalUpload.ref);
-          
-          // Create minimal metadata for Firestore
-          const mediaDoc = {
-            originalFileName: file.name,
-            fileName: fileName,
-            originalUrl: originalUrl,
-            optimizedUrl: originalUrl,
-            thumbnailUrl: originalUrl,
-            fileType: file.type.split('/')[0],
-            mimeType: file.type,
-            fileSize: file.size,
-            uploadDate: new Date(),
-            approved: true, // Temporarily auto-approve all uploads for testing
-            showInGallery: true
-          };
-          
-          const docRef = await addDoc(collection(db, 'media_uploads'), mediaDoc);
-          
-          return {
-            id: docRef.id,
-            originalUrl,
-            optimizedUrl: originalUrl,
-            thumbnailUrl: originalUrl,
-            fileName,
-            metadata: {}
-          };
-        } catch (fallbackError) {
-          console.error('Fallback upload failed:', fallbackError);
-          throw new Error(`Firebase Storage CORS Error: Upload blocked by CORS policy. 
-          
 This is a common development issue. To fix:
 1. Configure CORS for your Firebase Storage bucket
 2. Run: gsutil cors set cors.json gs://YOUR-BUCKET-NAME.appspot.com
 3. See Firebase documentation for detailed instructions
 
 Original error: ${error.message}`);
-        }
       }
 
       if (error.code === 'permission-denied') {

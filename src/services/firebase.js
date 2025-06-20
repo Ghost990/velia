@@ -4,21 +4,28 @@ import { getStorage } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  // Replace with your Firebase config
-  apiKey: "AIzaSyDAC9IK7Ewk0A-h6Qx9IHmNPVLT7GTMp2E",
-  authDomain: "krisztidani-7d45c.firebaseapp.com",
-  projectId: "krisztidani-7d45c",
-  storageBucket: "krisztidani-7d45c.firebasestorage.app",
-  messagingSenderId: "943064589125",
-  appId: "1:943064589125:web:e67318672870e1bdbf942c"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
-export const db = getFirestore(app);
+// Connect to the 'wedding' Firestore database
+export const db = getFirestore(app, 'wedding');
 export const storage = getStorage(app);
 export const auth = getAuth(app);
+
+// For development debugging
+if (import.meta.env.DEV) {
+  console.log('Firebase initialized with project:', import.meta.env.VITE_FIREBASE_PROJECT_ID);
+  console.log('Using Firestore database: wedding');
+}
 
 export default app;

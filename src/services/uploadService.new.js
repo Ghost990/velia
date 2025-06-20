@@ -137,7 +137,7 @@ class UploadService {
         mimeType: file.type,
         fileSize: file.size,
         uploadDate: new Date(),
-        approved: true, // Temporarily auto-approve all uploads for testing
+        approved: !this.config.features?.requireApproval, // Auto-approve if not required
         showInGallery: true,
         filterUsed: null,
         likes: 0,
@@ -167,51 +167,14 @@ class UploadService {
     } catch (error) {
       // Enhanced error handling
       if (error.message?.includes('CORS') || error.code === 'storage/unknown') {
-        console.error('CORS Error Details:', error);
+        throw new Error(`Firebase Storage CORS Error: Upload blocked by CORS policy. 
         
-        // Try to work around CORS by using a different upload method
-        try {
-          console.log('Attempting alternative upload method...');
-          // Use uploadBytes instead of uploadBytesResumable as a fallback
-          const originalUpload = await uploadBytes(originalRef, file);
-          const originalUrl = await getDownloadURL(originalUpload.ref);
-          
-          // Create minimal metadata for Firestore
-          const mediaDoc = {
-            originalFileName: file.name,
-            fileName: fileName,
-            originalUrl: originalUrl,
-            optimizedUrl: originalUrl,
-            thumbnailUrl: originalUrl,
-            fileType: file.type.split('/')[0],
-            mimeType: file.type,
-            fileSize: file.size,
-            uploadDate: new Date(),
-            approved: true, // Temporarily auto-approve all uploads for testing
-            showInGallery: true
-          };
-          
-          const docRef = await addDoc(collection(db, 'media_uploads'), mediaDoc);
-          
-          return {
-            id: docRef.id,
-            originalUrl,
-            optimizedUrl: originalUrl,
-            thumbnailUrl: originalUrl,
-            fileName,
-            metadata: {}
-          };
-        } catch (fallbackError) {
-          console.error('Fallback upload failed:', fallbackError);
-          throw new Error(`Firebase Storage CORS Error: Upload blocked by CORS policy. 
-          
 This is a common development issue. To fix:
 1. Configure CORS for your Firebase Storage bucket
 2. Run: gsutil cors set cors.json gs://YOUR-BUCKET-NAME.appspot.com
 3. See Firebase documentation for detailed instructions
 
 Original error: ${error.message}`);
-        }
       }
 
       if (error.code === 'permission-denied') {
@@ -226,114 +189,3 @@ Original error: ${error.message}`);
       throw new Error(`Upload failed: ${error.message}. Check Firebase configuration and network connectivity.`);
     }
   }
-
-  /**
-   * Validate file before upload
-   * @param {File} file - File to validate
-   * @throws {Error} If file is invalid
-   */
-  validateFile(file) {
-    // Check file size
-    const maxSize = this.parseFileSize(this.config.upload?.maxFileSize || '50MB');
-    if (file.size > maxSize) {
-      throw new Error(`File size ${this.formatFileSize(file.size)} exceeds maximum allowed size of ${this.config.upload?.maxFileSize || '50MB'}`);
-    }
-
-    // Check file type
-    const allowedFormats = this.config.upload?.allowedFormats || ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov'];
-    const fileExtension = file.name.split('.').pop().toLowerCase();
-    
-    if (!allowedFormats.includes(fileExtension)) {
-      throw new Error(`File type .${fileExtension} is not allowed. Allowed types: ${allowedFormats.join(', ')}`);
-    }
-
-    // Additional MIME type check
-    const allowedMimeTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
-      'video/mp4', 'video/quicktime', 'video/mov'
-    ];
-    
-    if (!allowedMimeTypes.includes(file.type)) {
-      throw new Error(`MIME type ${file.type} is not allowed`);
-    }
-  }
-
-  /**
-   * Parse file size string to bytes
-   * @param {string} sizeStr - Size string like "50MB"
-   * @returns {number} Size in bytes
-   */
-  parseFileSize(sizeStr) {
-    const units = { B: 1, KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
-    const match = sizeStr.match(/^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB)$/i);
-    
-    if (!match) {
-      throw new Error(`Invalid file size format: ${sizeStr}`);
-    }
-
-    const [, size, unit] = match;
-    return parseFloat(size) * units[unit.toUpperCase()];
-  }
-
-  /**
-   * Format file size in bytes to human readable string
-   * @param {number} bytes - Size in bytes
-   * @returns {string} Formatted size string
-   */
-  formatFileSize(bytes) {
-    if (bytes === 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
-  }
-
-  /**
-   * Create a test upload to verify functionality
-   * @returns {Promise<Object>} Test result
-   */
-  async testUpload() {
-    try {
-      // Create a small test image
-      const canvas = document.createElement('canvas');
-      canvas.width = 100;
-      canvas.height = 100;
-      const ctx = canvas.getContext('2d');
-      
-      // Draw a simple test pattern
-      ctx.fillStyle = '#ff0000';
-      ctx.fillRect(0, 0, 50, 50);
-      ctx.fillStyle = '#00ff00';
-      ctx.fillRect(50, 0, 50, 50);
-      ctx.fillStyle = '#0000ff';
-      ctx.fillRect(0, 50, 50, 50);
-      ctx.fillStyle = '#ffff00';
-      ctx.fillRect(50, 50, 50, 50);
-
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-      const testFile = new File([blob], 'test_upload.png', { type: 'image/png' });
-
-      const result = await this.uploadSingleFile(testFile);
-      
-      return {
-        success: true,
-        message: 'Test upload completed successfully',
-        result
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Test upload failed: ${error.message}`,
-        error
-      };
-    }
-  }
-}
-
-export default UploadService;
