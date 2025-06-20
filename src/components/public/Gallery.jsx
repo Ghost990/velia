@@ -102,7 +102,7 @@ const Gallery = () => {
   const fetchMedia = async () => {
     try {
       setLoading(true);
-      console.log('Gallery: Fetching media from Firestore');
+      // console.log('Gallery: Fetching media from Firestore');
       
       const mediaQuery = query(
         collection(db, 'media_uploads'),
@@ -112,10 +112,10 @@ const Gallery = () => {
         limit(50)
       );
       
-      console.log('Gallery: Query created', mediaQuery);
+      // console.log('Gallery: Query created', mediaQuery);
       
       const snapshot = await getDocs(mediaQuery);
-      console.log('Gallery: Got snapshot with', snapshot.docs.length, 'documents');
+      // console.log('Gallery: Got snapshot with', snapshot.docs.length, 'documents');
       
       const mediaData = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -126,7 +126,7 @@ const Gallery = () => {
         };
       });
       
-      console.log('Gallery: Processed media data', mediaData);
+      // console.log('Gallery: Processed media data', mediaData);
       setMedia(mediaData);
     } catch (error) {
       console.error('Error fetching media:', error);
@@ -144,29 +144,29 @@ const Gallery = () => {
   };
 
   const filterAndSortMedia = () => {
-    console.log('filterAndSortMedia: Initial media length:', media.length, 'Filters:', { searchTerm, filterType, sortBy, selectedFilter });
+    // console.log('filterAndSortMedia: Initial media length:', media.length, 'Filters:', { searchTerm, filterType, sortBy, selectedFilter });
     let filtered = [...media];
     
     // Apply search filter
     if (searchTerm) {
-      console.log('filterAndSortMedia: Applying search term filter:', searchTerm);
+      // console.log('filterAndSortMedia: Applying search term filter:', searchTerm);
       filtered = filtered.filter(item => 
         item.originalFileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
       );
-      console.log('filterAndSortMedia: After search term filter, length:', filtered.length);
+      // console.log('filterAndSortMedia: After search term filter, length:', filtered.length);
     }
     
     // Apply type filter
     if (filterType !== 'all') {
-      console.log('filterAndSortMedia: Applying type filter:', filterType);
+      // console.log('filterAndSortMedia: Applying type filter:', filterType);
       filtered = filtered.filter(item => item.fileType === filterType);
-      console.log('filterAndSortMedia: After type filter, length:', filtered.length);
+      // console.log('filterAndSortMedia: After type filter, length:', filtered.length);
     }
     
     // Apply AR filter filter
     if (selectedFilter !== 'all') {
-      console.log('filterAndSortMedia: Applying selectedFilter:', selectedFilter);
+      // console.log('filterAndSortMedia: Applying selectedFilter:', selectedFilter);
       if (selectedFilter === 'with-filters') {
         filtered = filtered.filter(item => item.filterUsed);
       } else if (selectedFilter === 'no-filters') {
@@ -174,7 +174,7 @@ const Gallery = () => {
       } else {
         // Example: filtered = filtered.filter(item => item.someProperty === selectedFilter);
       }
-      console.log('filterAndSortMedia: After selectedFilter, length:', filtered.length);
+      // console.log('filterAndSortMedia: After selectedFilter, length:', filtered.length);
     }
     
     // Apply sorting
@@ -190,9 +190,9 @@ const Gallery = () => {
           return 0;
       }
     });
-    console.log('filterAndSortMedia: After sorting, final filtered length:', filtered.length);
+    // console.log('filterAndSortMedia: After sorting, final filtered length:', filtered.length);
     setFilteredMedia(filtered);
-    console.log('filterAndSortMedia: setFilteredMedia called with:', filtered);
+    // console.log('filterAndSortMedia: setFilteredMedia called with:', filtered);
   };
 
   const handleMediaClick = (mediaItem) => {
@@ -600,7 +600,7 @@ const Gallery = () => {
             </Button>
           </VStack>
         ) : (
-          console.log('Gallery JSX: Rendering filteredMedia. Length:', filteredMedia.length, 'Content:', filteredMedia),
+          // console.log('Gallery JSX: Rendering filteredMedia. Length:', filteredMedia.length, 'Content:', filteredMedia),
           <SimpleGrid 
             columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} 
             spacing={4}
@@ -608,8 +608,8 @@ const Gallery = () => {
             <AnimatePresence>
               {filteredMedia.map((mediaItem, index) => {
                 const pathToLog = mediaItem.optimization?.variants?.preview || mediaItem.optimizedUrl;
-                console.log(`Gallery: MOTION WRAPPED RENDER for ${mediaItem.id}, storagePath:`, pathToLog, 'Full mediaItem:', mediaItem);
-                console.log('Gallery: FirebaseImage component reference just before use:', FirebaseImage);
+                // console.log(`Gallery: MOTION WRAPPED RENDER for ${mediaItem.id}, storagePath:`, pathToLog, 'Full mediaItem:', mediaItem);
+                // console.log('Gallery: FirebaseImage component reference just before use:', FirebaseImage);
                 if (!pathToLog) {
                   // Placeholder rendering
                   return (
@@ -713,7 +713,7 @@ const Gallery = () => {
                   maxH="80vh"
                   bg="white"
                 >
-                  {selectedMedia.fileType === 'photo' ? (
+                  {selectedMedia.fileType === 'image' ? (
                     <FirebaseImage
                       storagePath={selectedMedia.optimizedUrl || selectedMedia.originalUrl}
                       imageProps={{
@@ -745,9 +745,6 @@ const Gallery = () => {
                   <VStack spacing={3}>
                     <HStack justify="space-between" w="100%">
                       <VStack align="start" spacing={1}>
-                        <Text fontWeight="bold">
-                          {selectedMedia.originalFileName}
-                        </Text>
                         <Text fontSize="sm" color="gray.600">
                           <Calendar size={14} style={{ display: 'inline', marginRight: '4px' }} />
                           {selectedMedia.uploadDate?.toLocaleDateString('hu-HU', {
@@ -775,15 +772,7 @@ const Gallery = () => {
                       >
                         Letöltés
                       </Button>
-                      <Button
-                        leftIcon={<Share2 />}
-                        size="sm"
-                        variant="outline"
-                        flex={1}
-                        onClick={() => shareMedia(selectedMedia)}
-                      >
-                        Megosztás
-                      </Button>
+
                     </HStack>
 
                     {/* Optimization info */}

@@ -13,7 +13,7 @@ import { Image, Skeleton, Box } from '@chakra-ui/react';
  * @returns {React.Component} - A React component that renders an image from Firebase Storage
  */
 const FirebaseImage = ({ storagePath, imageProps = {} }) => {
-  console.log('FirebaseImage: Component rendering. Received storagePath:', storagePath, 'imageProps:', imageProps);
+  // console.log('FirebaseImage: Component rendering. Received storagePath:', storagePath, 'imageProps:', imageProps);
   const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -27,7 +27,7 @@ const FirebaseImage = ({ storagePath, imageProps = {} }) => {
         return;
       }
       
-      console.log('FirebaseImage: Loading image from path:', storagePath);
+      // console.log('FirebaseImage: Loading image from path:', storagePath);
       
       try {
         setLoading(true);
@@ -59,7 +59,7 @@ const FirebaseImage = ({ storagePath, imageProps = {} }) => {
               }
             }
             
-            console.log('Extracted path:', path, 'from URL:', storagePath);
+            // console.log('Extracted path:', path, 'from URL:', storagePath);
           } catch (err) {
             console.error('Error parsing Firebase Storage URL:', err);
             // Fall back to using the full URL
@@ -68,12 +68,12 @@ const FirebaseImage = ({ storagePath, imageProps = {} }) => {
         }
         
         // Get a fresh download URL using the Firebase SDK
-        console.log('FirebaseImage: Creating storage ref with path:', path);
+        // console.log('FirebaseImage: Creating storage ref with path:', path);
         const storageRef = ref(storage, path);
         
         try {
           const url = await getDownloadURL(storageRef);
-          console.log('FirebaseImage: Successfully got download URL:', url);
+          // console.log('FirebaseImage: Successfully got download URL:', url);
           
           // Add cache-busting parameter
           const urlWithCacheBusting = `${url}&t=${Date.now()}`;
@@ -83,7 +83,7 @@ const FirebaseImage = ({ storagePath, imageProps = {} }) => {
           
           // Try using the path directly if it looks like a URL
           if (storagePath.startsWith('http')) {
-            console.log('FirebaseImage: Trying to use original URL directly:', storagePath);
+            // console.log('FirebaseImage: Trying to use original URL directly:', storagePath);
             setImageUrl(storagePath);
           } else {
             throw downloadErr;
