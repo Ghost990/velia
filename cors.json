@@ -1,8 +1,24 @@
 [
   {
-    "origin": ["http://localhost:5173", "http://127.0.0.1:5173", "https://localhost:5173"],
+    "origin": [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "https://localhost:5173",
+      "http://localhost:5174",
+      "http://127.0.0.1:5174",
+      "https://localhost:5174",
+      "https://krisztidani.firebaseapp.com",
+      "https://krisztidani.web.app"
+    ],
     "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "maxAgeSeconds": 3600,
-    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "User-Agent", "x-goog-resumable"]
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "Content-Length",
+      "User-Agent",
+      "x-goog-resumable",
+      "Access-Control-Allow-Origin"
+    ]
   }
 ]

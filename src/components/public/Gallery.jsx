@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import FirebaseImage from '../common/FirebaseImage';
 import {
   Box,
   Container,
@@ -24,6 +25,7 @@ import {
   Alert,
   AlertIcon,
   Flex,
+  Progress,
   useDisclosure,
   useToast
 } from '@chakra-ui/react';
@@ -38,13 +40,15 @@ import {
   Video,
   ArrowLeft,
   Grid,
-  List
+  List,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useConfig } from '../../contexts/ConfigContext';
-import { collection, query, orderBy, where, limit, getDocs } from 'firebase/firestore';
+import { setupDebugHelpers } from './debug-helper';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import UploadService from '../../services/uploadService';
 
@@ -55,6 +59,8 @@ const Gallery = () => {
   const [media, setMedia] = useState([]);
   const [filteredMedia, setFilteredMedia] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -79,13 +85,25 @@ const Gallery = () => {
     }
   }, [canViewGallery]);
 
+
+  useEffect(() => {
+    fetchMedia();
+    // Setup debug helpers for fixing media items
+    setupDebugHelpers();
+  }, []);
+
   useEffect(() => {
     filterAndSortMedia();
   }, [media, searchTerm, filterType, sortBy, selectedFilter]);
 
+
+
+  // Fetch all media items that match gallery criteria
   const fetchMedia = async () => {
     try {
       setLoading(true);
+      console.log('Gallery: Fetching media from Firestore');
+      
       const mediaQuery = query(
         collection(db, 'media_uploads'),
         where('approved', '==', true),
@@ -94,17 +112,27 @@ const Gallery = () => {
         limit(50)
       );
       
-      const snapshot = await getDocs(mediaQuery);
-      const mediaData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        uploadDate: doc.data().uploadDate?.toDate()
-      }));
+      console.log('Gallery: Query created', mediaQuery);
       
+      const snapshot = await getDocs(mediaQuery);
+      console.log('Gallery: Got snapshot with', snapshot.docs.length, 'documents');
+      
+      const mediaData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          uploadDate: data.uploadDate?.toDate()
+        };
+      });
+      
+      console.log('Gallery: Processed media data', mediaData);
       setMedia(mediaData);
     } catch (error) {
       console.error('Error fetching media:', error);
       toast({
+
+
         title: 'Hiba történt',
         description: 'Nem sikerült betölteni a galériát',
         status: 'error',
@@ -203,37 +231,103 @@ const Gallery = () => {
     }
   };
 
-  const handleUpload = async () => {
-    const uploadFiles = location.state?.uploadFiles;
-    if (!uploadFiles || uploadFiles.length === 0) return;
+  // File input reference for upload button
+  const fileInputRef = useRef(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+
+  // Handle file drop
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  }, []);
+
+  // Handle drag events
+  const handleDrag = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  }, []);
+
+  // Handle file input change
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(e.target.files);
+    }
+  };
+
+  // Process files for upload
+  const handleFiles = async (files) => {
+    const validFiles = Array.from(files).filter(file => 
+      file.type.startsWith('image/') || file.type.startsWith('video/')
+    );
+
+    if (validFiles.length === 0) {
+      toast({
+        title: 'Nem támogatott fájltípus',
+        description: 'Csak kép és videó fájlokat tölthetsz fel',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    await uploadFiles(validFiles);
+  };
+
+  // Handle upload button click
+  const handleUploadButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Upload files with progress tracking
+  const uploadFiles = async (files) => {
+    if (!files || files.length === 0) return;
 
     try {
-      setLoading(true);
+      setIsUploading(true);
+      setUploadProgress(0);
+      
       const uploadService = new UploadService(config);
       
-      for (const file of uploadFiles) {
-        try {
-          await uploadService.uploadSingleFile(file);
-        } catch (fileError) {
-          console.error(`Error uploading file ${file.name}:`, fileError);
-          toast({
-            title: `Hiba a ${file.name} feltöltésekor`,
-            description: fileError.message,
-            status: 'error',
-            duration: 3000,
-          });
+      // Use the uploadFiles method with progress tracking
+      const results = await uploadService.uploadFiles(
+        files,
+        (progress) => {
+          setUploadProgress(progress);
+        },
+        (file, result, error) => {
+          if (error) {
+            console.error(`Error uploading file ${file.name}:`, error);
+            toast({
+              title: `Hiba a ${file.name} feltöltésekor`,
+              description: error.message,
+              status: 'error',
+              duration: 3000,
+            });
+          }
         }
-      }
+      );
 
+      const successCount = results.filter(r => r.success).length;
+      
       toast({
-        title: `${uploadFiles.length} fájl sikeresen feltöltve`,
+        title: `${successCount} fájl sikeresen feltöltve`,
         description: 'A képek moderáció után jelennek meg a galériában',
         status: 'success',
         duration: 3000,
       });
-
-      // Clear the upload files from location state
-      navigate('/gallery', { replace: true });
       
       // Refresh the gallery
       fetchMedia();
@@ -247,12 +341,23 @@ const Gallery = () => {
         duration: 3000,
       });
     } finally {
-      setLoading(false);
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // Legacy upload handler for navigation state
+  const handleLegacyUpload = async () => {
+    const filesToUpload = location.state?.uploadFiles;
+    if (filesToUpload && filesToUpload.length > 0) {
+      await uploadFiles(filesToUpload);
+      // Clear the upload files from location state
+      navigate('/gallery', { replace: true });
     }
   };
 
   useEffect(() => {
-    handleUpload();
+    handleLegacyUpload();
   }, [location.state]);
 
   if (!canViewGallery) {
@@ -282,7 +387,14 @@ const Gallery = () => {
   }
 
   return (
-    <Box minH="100vh" bg="linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #f3e8ff 100%)">
+    <Box 
+      minH="100vh" 
+      bg="linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #f3e8ff 100%)"
+      onDragEnter={handleDrag}
+      onDragLeave={handleDrag}
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+    >
       {/* Header */}
       <Box 
         bg="white/80" 
@@ -319,13 +431,32 @@ const Gallery = () => {
                 onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
                 aria-label="Nézet váltás"
               />
-              <Button 
-                leftIcon={<Camera />}
-                colorScheme="rose"
-                onClick={() => navigate('/camera')}
-              >
-                Új fotó
-              </Button>
+              <HStack spacing={2}>
+                <Button 
+                  leftIcon={<Camera />}
+                  colorScheme="rose"
+                  onClick={() => navigate('/camera')}
+                >
+                  Új fotó
+                </Button>
+                <Button
+                  leftIcon={<Upload />}
+                  colorScheme="purple"
+                  onClick={handleUploadButtonClick}
+                  isLoading={isUploading}
+                  loadingText={`${Math.round(uploadProgress)}%`}
+                >
+                  Feltöltés
+                </Button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                  multiple
+                  accept="image/*,video/*"
+                />
+              </HStack>
             </HStack>
           </Flex>
 
@@ -387,6 +518,57 @@ const Gallery = () => {
 
       {/* Content */}
       <Container maxW="container.xl" py={8}>
+        {/* Drag & Drop Overlay */}
+        {dragActive && (
+          <Box
+            position="fixed"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            bg="blackAlpha.600"
+            backdropFilter="blur(5px)"
+            zIndex={1000}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            flexDirection="column"
+          >
+            <Box
+              bg="white"
+              p={10}
+              borderRadius="xl"
+              boxShadow="xl"
+              textAlign="center"
+              maxW="md"
+              w="full"
+            >
+              <VStack spacing={6}>
+                <Box fontSize="5xl">📸</Box>
+                <Heading size="lg">Húzd ide a képeket</Heading>
+                <Text color="gray.600">Engedd el a képeket a feltöltéshez</Text>
+              </VStack>
+            </Box>
+          </Box>
+        )}
+        
+        {/* Upload Progress */}
+        {isUploading && (
+          <Box mb={6} bg="white" p={4} borderRadius="lg" boxShadow="sm">
+            <VStack spacing={3} align="stretch">
+              <HStack justify="space-between">
+                <Text fontWeight="medium">Feltöltés folyamatban...</Text>
+                <Text>{Math.round(uploadProgress)}%</Text>
+              </HStack>
+              <Progress
+                value={uploadProgress}
+                size="sm"
+                colorScheme="rose"
+                borderRadius="full"
+              />
+            </VStack>
+          </Box>
+        )}
         {loading ? (
           <VStack spacing={4} py={20}>
             <Spinner size="xl" color="rose.500" />
@@ -436,13 +618,16 @@ const Gallery = () => {
                     position="relative"
                   >
                     {mediaItem.fileType === 'photo' ? (
-                      <Image
-                        src={mediaItem.optimization?.variants?.preview || mediaItem.optimizedUrl}
-                        alt={mediaItem.originalFileName}
-                        w="100%"
-                        h="200px"
-                        objectFit="cover"
-                        loading="lazy"
+                      <FirebaseImage
+                        storagePath={mediaItem.optimization?.variants?.preview || mediaItem.optimizedUrl}
+                        imageProps={{
+                          alt: mediaItem.originalFileName,
+                          w: "100%",
+                          h: "200px",
+                          objectFit: "cover",
+                          loading: "lazy",
+                          borderRadius: "md"
+                        }}
                       />
                     ) : (
                       <Box
@@ -518,12 +703,15 @@ const Gallery = () => {
                   bg="white"
                 >
                   {selectedMedia.fileType === 'photo' ? (
-                    <Image
-                      src={selectedMedia.optimizedUrl || selectedMedia.originalUrl}
-                      alt={selectedMedia.originalFileName}
-                      maxW="100%"
-                      maxH="100%"
-                      objectFit="contain"
+                    <FirebaseImage
+                      storagePath={selectedMedia.optimizedUrl || selectedMedia.originalUrl}
+                      imageProps={{
+                        alt: selectedMedia.originalFileName,
+                        maxW: "100%",
+                        maxH: "100%",
+                        objectFit: "contain",
+                        borderRadius: "md"
+                      }}
                     />
                   ) : (
                     <video
