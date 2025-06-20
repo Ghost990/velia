@@ -12,6 +12,7 @@ import WeddingHome from './components/public/WeddingHome';
 import CameraCapture from './components/public/CameraCapture';
 import Gallery from './components/public/Gallery';
 import TestConfiguration from './components/public/TestConfiguration';
+import DebugGallery from './components/public/DebugGallery';
 
 // Admin Components
 import AdminLogin from './components/admin/AdminLogin';
@@ -32,6 +33,7 @@ function App() {
                   <Route path="/camera" element={<CameraCapture />} />
                   <Route path="/gallery" element={<Gallery />} />
                   <Route path="/test" element={<TestConfiguration />} />
+                  <Route path="/debug-gallery" element={<DebugGallery />} />
                   
                   {/* Admin Routes */}
                   <Route path="/admin/login" element={<AdminLogin />} />

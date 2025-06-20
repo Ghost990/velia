@@ -144,30 +144,37 @@ const Gallery = () => {
   };
 
   const filterAndSortMedia = () => {
+    console.log('filterAndSortMedia: Initial media length:', media.length, 'Filters:', { searchTerm, filterType, sortBy, selectedFilter });
     let filtered = [...media];
     
     // Apply search filter
     if (searchTerm) {
+      console.log('filterAndSortMedia: Applying search term filter:', searchTerm);
       filtered = filtered.filter(item => 
         item.originalFileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
       );
+      console.log('filterAndSortMedia: After search term filter, length:', filtered.length);
     }
     
     // Apply type filter
     if (filterType !== 'all') {
+      console.log('filterAndSortMedia: Applying type filter:', filterType);
       filtered = filtered.filter(item => item.fileType === filterType);
+      console.log('filterAndSortMedia: After type filter, length:', filtered.length);
     }
     
     // Apply AR filter filter
     if (selectedFilter !== 'all') {
+      console.log('filterAndSortMedia: Applying selectedFilter:', selectedFilter);
       if (selectedFilter === 'with-filters') {
         filtered = filtered.filter(item => item.filterUsed);
       } else if (selectedFilter === 'no-filters') {
         filtered = filtered.filter(item => !item.filterUsed);
       } else {
-        filtered = filtered.filter(item => item.filterUsed === selectedFilter);
+        // Example: filtered = filtered.filter(item => item.someProperty === selectedFilter);
       }
+      console.log('filterAndSortMedia: After selectedFilter, length:', filtered.length);
     }
     
     // Apply sorting
@@ -183,8 +190,9 @@ const Gallery = () => {
           return 0;
       }
     });
-    
+    console.log('filterAndSortMedia: After sorting, final filtered length:', filtered.length);
     setFilteredMedia(filtered);
+    console.log('filterAndSortMedia: setFilteredMedia called with:', filtered);
   };
 
   const handleMediaClick = (mediaItem) => {
@@ -592,96 +600,99 @@ const Gallery = () => {
             </Button>
           </VStack>
         ) : (
+          console.log('Gallery JSX: Rendering filteredMedia. Length:', filteredMedia.length, 'Content:', filteredMedia),
           <SimpleGrid 
             columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} 
             spacing={4}
           >
             <AnimatePresence>
-              {filteredMedia.map((mediaItem, index) => (
-                <MotionBox
-                  key={mediaItem.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  whileHover={{ scale: 1.05 }}
-                  cursor="pointer"
-                  onClick={() => handleMediaClick(mediaItem)}
-                >
-                  <Box
-                    bg="white"
-                    borderRadius="xl"
-                    overflow="hidden"
-                    boxShadow="sm"
-                    _hover={{ boxShadow: 'md' }}
-                    transition="all 0.2s"
-                    position="relative"
-                  >
-                    {mediaItem.fileType === 'photo' ? (
-                      <FirebaseImage
-                        storagePath={mediaItem.optimization?.variants?.preview || mediaItem.optimizedUrl}
-                        imageProps={{
-                          alt: mediaItem.originalFileName,
-                          w: "100%",
-                          h: "200px",
-                          objectFit: "cover",
-                          loading: "lazy",
-                          borderRadius: "md"
-                        }}
-                      />
-                    ) : (
+              {filteredMedia.map((mediaItem, index) => {
+                const pathToLog = mediaItem.optimization?.variants?.preview || mediaItem.optimizedUrl;
+                console.log(`Gallery: MOTION WRAPPED RENDER for ${mediaItem.id}, storagePath:`, pathToLog, 'Full mediaItem:', mediaItem);
+                console.log('Gallery: FirebaseImage component reference just before use:', FirebaseImage);
+                if (!pathToLog) {
+                  // Placeholder rendering
+                  return (
+                    <MotionBox
+                      key={`${mediaItem.id}-placeholder`}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                    >
                       <Box
-                        w="100%"
-                        h="200px"
                         bg="gray.100"
+                        borderRadius="xl"
+                        overflow="hidden"
+                        boxShadow="sm"
+                        h="280px"
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
                       >
-                        <Video size={40} color="gray.400" />
+                        <Text color="gray.500">Image Unavailable</Text>
                       </Box>
-                    )}
-                    
-                    {/* Overlay */}
-                    <Box
-                      position="absolute"
-                      bottom={0}
-                      left={0}
-                      right={0}
-                      bg="linear-gradient(transparent, blackAlpha.700)"
-                      p={3}
+                    </MotionBox>
+                  );
+                } else {
+                  // Actual image rendering with FirebaseImage
+                  return (
+                    <MotionBox
+                      key={mediaItem.id}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      whileHover={{ scale: 1.05 }}
+                      cursor="pointer"
+                      onClick={() => handleMediaClick(mediaItem)}
+                      className="group" // For potential group hover effects
                     >
-                      <HStack justify="space-between" align="end">
-                        <VStack align="start" spacing={1}>
-                          {mediaItem.filterUsed && (
-                            <Badge 
-                              colorScheme="pink" 
-                              variant="solid"
-                              fontSize="xs"
-                            >
-                              {mediaItem.filterUsed.replace('_', ' ')}
-                            </Badge>
-                          )}
-                          <Text color="white" fontSize="xs">
-                            {mediaItem.uploadDate?.toLocaleDateString('hu-HU')}
+                      <Box
+                        bg="white"
+                        borderRadius="xl"
+                        overflow="hidden"
+                        boxShadow="sm"
+                        _hover={{ boxShadow: 'md' }}
+                        transition="all 0.2s"
+                        position="relative"
+                        h="280px"
+                      >
+                        <FirebaseImage
+                          storagePath={pathToLog}
+                          imageProps={{
+                            w: '100%',
+                            h: '100%',
+                            objectFit: 'cover',
+                          }}
+                        />
+                        <Box
+                          position="absolute"
+                          bottom="0"
+                          left="0"
+                          right="0"
+                          bg="rgba(0,0,0,0.7)"
+                          color="white"
+                          p={2}
+                          opacity={0}
+                          _groupHover={{ opacity: 1 }} // Show on parent MotionBox hover
+                          transition="opacity 0.3s ease-in-out"
+                        >
+                          <Text fontSize="sm" fontWeight="semibold" noOfLines={1}>
+                            {mediaItem.originalFileName || mediaItem.fileName || 'Untitled'}
                           </Text>
-                        </VStack>
-                        
-                        <HStack spacing={1}>
-                          {mediaItem.likes && (
-                            <HStack spacing={1}>
-                              <Heart size={12} fill="pink" color="pink" />
-                              <Text color="white" fontSize="xs">
-                                {mediaItem.likes}
-                              </Text>
-                            </HStack>
+                          {mediaItem.uploadDate?.seconds && (
+                            <Text fontSize="xs">
+                              {new Date(mediaItem.uploadDate.seconds * 1000).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </Text>
                           )}
-                        </HStack>
-                      </HStack>
-                    </Box>
-                  </Box>
-                </MotionBox>
-              ))}
+                        </Box>
+                      </Box>
+                    </MotionBox>
+                  );
+                }
+
+              })}
             </AnimatePresence>
           </SimpleGrid>
         )}

@@ -13,6 +13,7 @@ import { Image, Skeleton, Box } from '@chakra-ui/react';
  * @returns {React.Component} - A React component that renders an image from Firebase Storage
  */
 const FirebaseImage = ({ storagePath, imageProps = {} }) => {
+  console.log('FirebaseImage: Component rendering. Received storagePath:', storagePath, 'imageProps:', imageProps);
   const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
