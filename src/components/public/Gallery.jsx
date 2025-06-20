@@ -46,6 +46,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useImageOptimization } from '../../hooks/useImageOptimization';
 import { useConfig } from '../../contexts/ConfigContext';
 import { setupDebugHelpers } from './debug-helper';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
@@ -69,10 +70,12 @@ const Gallery = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isOptimizationModalOpen, onOpen: onOptimizationModalOpen, onClose: onOptimizationModalClose } = useDisclosure(); // For a simple optimization progress modal
   const navigate = useNavigate();
   const toast = useToast();
   const { t } = useTranslation();
   const { config } = useConfig();
+  const { optimizeSingle } = useImageOptimization();
   const location = useLocation();
 
   const isGalleryEnabled = config.wedding?.features?.galleryEnabled;
@@ -244,6 +247,8 @@ const Gallery = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [isOptimizingGalleryFile, setIsOptimizingGalleryFile] = useState(false);
+  const [currentOptimizingFileName, setCurrentOptimizingFileName] = useState('');
 
   // Handle file drop
   const handleDrop = useCallback((e) => {
@@ -300,8 +305,54 @@ const Gallery = () => {
   };
 
   // Upload files with progress tracking
-  const uploadFiles = async (files) => {
-    if (!files || files.length === 0) return;
+  const uploadFiles = async (filesRaw) => {
+    if (!filesRaw || filesRaw.length === 0) return;
+
+    setIsOptimizingGalleryFile(true);
+    onOptimizationModalOpen();
+    const filesToProcess = Array.from(filesRaw);
+    const processedFiles = [];
+
+    for (const file of filesToProcess) {
+      setCurrentOptimizingFileName(file.name);
+      if (file.type.startsWith('image/')) {
+        try {
+          // console.log(`Optimizing image: ${file.name}`);
+          const optimizationResult = await optimizeSingle(file); // From useImageOptimization
+          processedFiles.push(optimizationResult.optimized); // Ensure 'optimized' is the File object
+          // console.log(`Optimized ${file.name}, new size: ${optimizationResult.optimized.size}`);
+        } catch (optError) {
+          console.error(`Error optimizing file ${file.name}:`, optError);
+          toast({
+            title: `Hiba az ${file.name} optimalizálásakor`,
+            description: optError.message,
+            status: 'error',
+            duration: 3000,
+          });
+          // Optionally, upload original if optimization fails, or skip
+          // processedFiles.push(file); // Uncomment to upload original on error
+        }
+      } else {
+        processedFiles.push(file); // Add videos and other non-image files as is
+      }
+    }
+    setCurrentOptimizingFileName('');
+    setIsOptimizingGalleryFile(false);
+    onOptimizationModalClose();
+
+    if (processedFiles.length === 0) {
+      toast({
+        title: 'Nincs feltölthető fájl',
+        description: 'Nem maradt fájl a feldolgozás után, vagy hiba történt az optimalizálás során.',
+        status: 'info',
+        duration: 4000,
+      });
+      setIsUploading(false); // Reset uploading state if nothing to upload
+      setUploadProgress(0);
+      return;
+    }
+
+    // Original function continues from here, using 'processedFiles' instead of 'files'
 
     try {
       setIsUploading(true);
@@ -311,7 +362,7 @@ const Gallery = () => {
       
       // Use the uploadFiles method with progress tracking
       const results = await uploadService.uploadFiles(
-        files,
+        processedFiles,
         (progress) => {
           setUploadProgress(progress);
         },
@@ -523,6 +574,25 @@ const Gallery = () => {
           </HStack>
         </Container>
       </Box>
+
+      {/* Optimization Progress Modal */}
+      <Modal isOpen={isOptimizationModalOpen} onClose={() => {}} isCentered closeOnOverlayClick={false} trapFocus={false}>
+        <ModalOverlay bg="blackAlpha.600" />
+        <ModalContent mx={4}>
+          <ModalBody p={6}>
+            <VStack spacing={5} textAlign="center">
+              <Spinner size="xl" color="rose.500" thickness="4px" speed="0.65s" />
+              <Text fontSize="lg" fontWeight="semibold" color="gray.700">Optimalizálás folyamatban...</Text>
+              {currentOptimizingFileName && 
+                <Text fontSize="sm" color="gray.600" noOfLines={1} title={currentOptimizingFileName}>
+                  Fájl: {currentOptimizingFileName}
+                </Text>
+              }
+              <Text fontSize="xs" color="gray.500">Ez eltarthat egy kis ideig, kérlek várj.</Text>
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
 
       {/* Content */}
       <Container maxW="container.xl" py={8}>

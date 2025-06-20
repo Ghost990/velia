@@ -527,7 +527,7 @@ const MediaModeration = () => {
                 >
                   {selectedMedia.fileType === 'image' ? (
                     <Image
-                      src={selectedMedia.url}
+                      src={selectedMedia.optimizedUrl || selectedMedia.originalUrl}
                       alt={selectedMedia.fileName}
                       w="100%"
                       maxH="400px"

@@ -1,3 +1,5 @@
+import imageCompression from 'browser-image-compression';
+
 class ImageOptimizer {
   constructor(config) {
     this.config = config;
@@ -11,20 +13,33 @@ class ImageOptimizer {
     try {
       const startTime = performance.now();
       
-      // Step 1: Load image
-      const img = await this.loadImage(file);
+      // Step 1: Use browser-image-compression for main optimization
+      const imageCompressionOptions = {
+        maxSizeMB: settings.maxSizeMB || 1.5, // Target 1.5MB max
+        maxWidthOrHeight: settings.maxDimensions?.gallery?.width || 1920, // Target width or 1920px
+        useWebWorker: true,
+        initialQuality: settings.quality?.[settings.quality?.default] || 0.75, // Get quality from settings or default to 0.75
+        fileType: settings.formats?.preferredOutput === 'webp' ? 'image/webp' : 'image/jpeg',
+        // exifOrientation: true, // Let browser-image-compression handle orientation
+      };
+
+      // Load the original file into an Image object for variant generation before compressing the main file.
+      const originalImageForVariants = await this.loadImage(file);
+
+      console.log('Using browser-image-compression with options:', imageCompressionOptions);
+      const optimizedFile = await imageCompression(file, imageCompressionOptions);
+      // browser-image-compression returns a File object, which is a Blob
+      const optimizedBlob = optimizedFile;
+
+      // For metadata, we need the dimensions of the new optimizedBlob
+      // We can load it into an image to get dimensions, or assume browser-image-compression handled it well.
+      // For now, let's get dimensions from the optimized blob for accuracy in metadata.
+      const img = await this.loadImage(optimizedBlob); // Load the *optimized* blob to get its dimensions
+      const dimensions = { width: img.width, height: img.height };
+
       
-      // Step 2: Calculate optimal dimensions
-      const dimensions = this.calculateDimensions(img, settings.maxDimensions);
-      
-      // Step 3: Resize image
-      const resizedCanvas = await this.resizeImage(img, dimensions, settings);
-      
-      // Step 4: Apply compression and format conversion
-      const optimizedBlob = await this.compressImage(resizedCanvas, settings);
-      
-      // Step 5: Generate thumbnails and previews
-      const variants = await this.generateVariants(img, settings);
+      // Step 5: Generate thumbnails and previews using the original, uncompressed image data
+      const variants = await this.generateVariants(originalImageForVariants, settings);
       
       const processingTime = (performance.now() - startTime) / 1000;
       
