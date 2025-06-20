@@ -48,7 +48,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from '../../hooks/useTranslation';
 import MediaModeration from './MediaModeration';
@@ -58,10 +58,12 @@ import OptimizationSettings from './OptimizationSettings';
 const MotionCard = motion(Card);
 
 const AdminDashboard = () => {
+  console.log('AdminDashboard component rendering');
+  const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('7d');
   const { user, logout } = useAuth();
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -142,7 +144,7 @@ const AdminDashboard = () => {
 
       <Container maxW="container.xl" py={8}>
         <Routes>
-          <Route path="/" element={<DashboardHome stats={stats} />} />
+          <Route path="dashboard" element={<DashboardHome stats={stats} navigate={navigate} />} />
           <Route path="/media" element={<MediaModeration />} />
           <Route path="/analytics" element={<FilterAnalytics />} />
           <Route path="/optimization" element={<OptimizationSettings />} />
@@ -152,7 +154,8 @@ const AdminDashboard = () => {
   );
 };
 
-const DashboardHome = ({ stats }) => {
+const DashboardHome = ({ stats, navigate }) => {
+  console.log('DashboardHome component rendering');
   const cardBg = useColorModeValue('white', 'gray.800');
   
   return (

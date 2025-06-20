@@ -43,10 +43,13 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../../hooks/useTranslation';
+import { db } from '../../services/firebase'; // Corrected path to Firebase config
+import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const MotionCard = motion(Card);
 
 const MediaModeration = () => {
+  console.log('MediaModeration component rendering');
   const [pendingMedia, setPendingMedia] = useState([]);
   const [approvedMedia, setApprovedMedia] = useState([]);
   const [rejectedMedia, setRejectedMedia] = useState([]);
@@ -66,67 +69,118 @@ const MediaModeration = () => {
   }, []);
 
   const loadPendingMedia = async () => {
-    // Mock pending media
-    setPendingMedia([
-      {
-        id: '1',
-        fileName: 'wedding_photo_1.jpg',
-        fileType: 'photo',
-        uploadDate: new Date(),
-        userEmail: 'guest@example.com',
-        filterUsed: 'wedding_crown',
-        url: 'https://images.pexels.com/photos/1616468/pexels-photo-1616468.jpeg?auto=compress&cs=tinysrgb&w=400',
-        optimization: { compressionRatio: '65%' }
-      },
-      {
-        id: '2',
-        fileName: 'ceremony_video.mp4',
-        fileType: 'video',
-        uploadDate: new Date(),
-        userEmail: 'family@example.com',
-        filterUsed: null,
-        url: '#',
-        optimization: { compressionRatio: '45%' }
-      }
-    ]);
+    try {
+      const q = query(
+        collection(db, 'media_uploads'),
+        where('approved', '==', false),
+        // Consider adding another where clause for 'rejected', '==', false if you have that field
+        // Or, if items are only ever 'pending' or 'approved' or 'rejected', this might be enough.
+        // For now, let's assume 'approved: false' means it's pending and not explicitly rejected yet.
+      );
+      const querySnapshot = await getDocs(q);
+      console.log('loadPendingMedia - querySnapshot.docs:', querySnapshot.docs.length, querySnapshot.docs);
+      const pendingItems = querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+        uploadDate: docSnap.data().uploadDate?.toDate ? docSnap.data().uploadDate.toDate() : new Date(docSnap.data().uploadDate) // Handle both Timestamp and string/number dates
+      }));
+      console.log('loadPendingMedia - pendingItems:', pendingItems);
+      setPendingMedia(pendingItems);
+    } catch (error) {
+      console.error('Error loading pending media:', error);
+      toast({
+        title: 'Hiba a függőben lévő média betöltésekor',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+    // Mock data was previously here
+
   };
 
   const loadApprovedMedia = async () => {
-    // Mock approved media
-    setApprovedMedia([
-      {
-        id: '3',
-        fileName: 'reception_dance.jpg',
-        fileType: 'photo',
-        uploadDate: new Date(Date.now() - 86400000),
-        userEmail: 'bride@example.com',
-        filterUsed: 'hearts_sparkles',
-        url: 'https://images.pexels.com/photos/1616468/pexels-photo-1616468.jpeg?auto=compress&cs=tinysrgb&w=400',
-        approved: true
-      }
-    ]);
+    try {
+      const q = query(
+        collection(db, 'media_uploads'),
+        where('approved', '==', true)
+      );
+      const querySnapshot = await getDocs(q);
+      console.log('loadApprovedMedia - querySnapshot.docs:', querySnapshot.docs.length, querySnapshot.docs);
+      const approvedItems = querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+        uploadDate: docSnap.data().uploadDate?.toDate ? docSnap.data().uploadDate.toDate() : new Date(docSnap.data().uploadDate)
+      }));
+      console.log('loadApprovedMedia - approvedItems:', approvedItems);
+      setApprovedMedia(approvedItems);
+    } catch (error) {
+      console.error('Error loading approved media:', error);
+      toast({
+        title: 'Hiba a jóváhagyott média betöltésekor',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+    // Mock data was previously here
+
   };
 
   const loadRejectedMedia = async () => {
-    setRejectedMedia([]);
+    try {
+      const q = query(
+        collection(db, 'media_uploads'),
+        where('rejected', '==', true) // Assuming you have a 'rejected' field
+      );
+      const querySnapshot = await getDocs(q);
+      console.log('loadRejectedMedia - querySnapshot.docs:', querySnapshot.docs.length, querySnapshot.docs);
+      const rejectedItems = querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+        uploadDate: docSnap.data().uploadDate?.toDate ? docSnap.data().uploadDate.toDate() : new Date(docSnap.data().uploadDate)
+      }));
+      console.log('loadRejectedMedia - rejectedItems:', rejectedItems);
+      setRejectedMedia(rejectedItems);
+    } catch (error) {
+      console.error('Error loading rejected media:', error);
+      toast({
+        title: 'Hiba az elutasított média betöltésekor',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+    // Original mock data:
+    // setRejectedMedia([]);
   };
 
   const approveMedia = async (mediaId) => {
     try {
-      // Update in Firebase
-      const media = pendingMedia.find(m => m.id === mediaId);
-      if (media) {
-        setApprovedMedia(prev => [...prev, { ...media, approved: true }]);
-        setPendingMedia(prev => prev.filter(m => m.id !== mediaId));
+      const mediaRef = doc(db, 'media_uploads', mediaId);
+      await updateDoc(mediaRef, {
+        approved: true,
+        rejected: false, // Explicitly set rejected to false
+        showInGallery: true,
+        status: 'approved' // Optional: maintain a status field
+      });
+
+      // Refresh lists
+      loadPendingMedia();
+      loadApprovedMedia();
         
-        toast({
-          title: 'Jóváhagyva',
-          description: 'A tartalom megjelenik a galériában',
-          status: 'success',
-          duration: 3000,
-        });
-      }
+      toast({
+        title: 'Jóváhagyva',
+        description: 'A tartalom megjelenik a galériában.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
+      console.error('Error approving media:', error);
       toast({
         title: 'Hiba',
         description: 'Nem sikerült jóváhagyni a tartalmat',
@@ -138,19 +192,27 @@ const MediaModeration = () => {
 
   const rejectMedia = async (mediaId) => {
     try {
-      const media = pendingMedia.find(m => m.id === mediaId);
-      if (media) {
-        setRejectedMedia(prev => [...prev, { ...media, rejected: true }]);
-        setPendingMedia(prev => prev.filter(m => m.id !== mediaId));
+      const mediaRef = doc(db, 'media_uploads', mediaId);
+      await updateDoc(mediaRef, {
+        approved: false,
+        rejected: true,
+        showInGallery: false,
+        status: 'rejected' // Optional: maintain a status field
+      });
+
+      // Refresh lists
+      loadPendingMedia();
+      loadRejectedMedia();
         
-        toast({
-          title: 'Elutasítva',
-          description: 'A tartalom nem jelenik meg a galériában',
-          status: 'warning',
-          duration: 3000,
-        });
-      }
+      toast({
+        title: 'Elutasítva',
+        description: 'A tartalom nem jelenik meg a galériában.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
+      console.error('Error rejecting media:', error);
       toast({
         title: 'Hiba',
         description: 'Nem sikerült elutasítani a tartalmat',
@@ -162,19 +224,28 @@ const MediaModeration = () => {
 
   const deleteMedia = async (mediaId, category) => {
     try {
+      const mediaRef = doc(db, 'media_uploads', mediaId);
+      await deleteDoc(mediaRef);
+
+      // Refresh the appropriate list
       if (category === 'approved') {
-        setApprovedMedia(prev => prev.filter(m => m.id !== mediaId));
+        loadApprovedMedia();
       } else if (category === 'rejected') {
-        setRejectedMedia(prev => prev.filter(m => m.id !== mediaId));
+        loadRejectedMedia();
+      } else if (category === 'pending') { // If deleting from pending for some reason
+        loadPendingMedia();
       }
-      
+      // Note: Consider also deleting from Firebase Storage here if needed.
+
       toast({
         title: 'Törölve',
-        description: 'A tartalom véglegesen törölve lett',
+        description: 'A tartalom véglegesen törölve lett.',
         status: 'info',
         duration: 3000,
+        isClosable: true,
       });
     } catch (error) {
+      console.error('Error deleting media:', error);
       toast({
         title: 'Hiba',
         description: 'Nem sikerült törölni a tartalmat',
@@ -209,9 +280,9 @@ const MediaModeration = () => {
             bg="gray.100"
             position="relative"
           >
-            {media.fileType === 'photo' ? (
+            {media.fileType === 'image' ? (
               <Image
-                src={media.url}
+                src={media.thumbnailUrl}
                 alt={media.fileName}
                 w="100%"
                 h="100%"
@@ -454,7 +525,7 @@ const MediaModeration = () => {
                   overflow="hidden"
                   bg="gray.100"
                 >
-                  {selectedMedia.fileType === 'photo' ? (
+                  {selectedMedia.fileType === 'image' ? (
                     <Image
                       src={selectedMedia.url}
                       alt={selectedMedia.fileName}
