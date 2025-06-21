@@ -44,14 +44,14 @@ const availableLenses = [
 
 const SnapCameraKitPOC = () => {
   const canvasRef = useRef(null);
+  const sessionRef = useRef(null);
+  const mediaStreamRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentLensName, setCurrentLensName] = useState('None');
   const [canvasKey, setCanvasKey] = useState(Date.now());
-
   const [cameraKit, setCameraKit] = useState(null);
   const [session, setSession] = useState(null);
-  const mediaStreamRef = useRef(null);
 
   const setupEventListeners = (activeSession) => {
     if (!activeSession || !activeSession.events) return [];
@@ -88,8 +88,7 @@ const SnapCameraKitPOC = () => {
   useEffect(() => {
     console.log(`SnapCameraKitPOC: useEffect triggered. Canvas key: ${canvasKey}`);
     let isMounted = true;
-    let currentSessionForCleanup = null;
-    let currentEventListeners = [];
+    let eventListeners = [];
 
     const initCameraKitAndSession = async () => {
       if (!canvasRef.current) {
@@ -112,9 +111,9 @@ const SnapCameraKitPOC = () => {
           newSession?.dispose();
           return;
         }
+        sessionRef.current = newSession;
         setSession(newSession);
-        currentSessionForCleanup = newSession;
-        currentEventListeners = setupEventListeners(newSession);
+        eventListeners = setupEventListeners(newSession);
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (!isMounted) {
           stream.getTracks().forEach(track => track.stop());
@@ -139,13 +138,21 @@ const SnapCameraKitPOC = () => {
         mediaStreamRef.current.getTracks().forEach(track => track.stop());
         mediaStreamRef.current = null;
       }
-      if (currentSessionForCleanup && currentEventListeners.length > 0) {
-        currentEventListeners.forEach(listener => {
-          currentSessionForCleanup.events.removeEventListener(listener.type, listener.handler);
-        });
+      const sessionToClean = sessionRef.current;
+      if (sessionToClean) {
+        if (eventListeners.length > 0) {
+          eventListeners.forEach(listener => {
+            sessionToClean.events.removeEventListener(listener.type, listener.handler);
+          });
+        }
+        sessionToClean.pause();
+        if (typeof sessionToClean.dispose === 'function') {
+            sessionToClean.dispose();
+        } else {
+            console.warn('SnapCameraKitPOC: session.dispose is not a function during cleanup.');
+        }
+        sessionRef.current = null;
       }
-      currentSessionForCleanup?.pause();
-      currentSessionForCleanup?.dispose();
       setSession(null);
       setCameraKit(null);
       setIsLoading(true);
@@ -153,7 +160,8 @@ const SnapCameraKitPOC = () => {
   }, [canvasKey]);
 
   const applyLensById = async (lensIdToApply, lensName) => {
-    if (!cameraKit || !session) {
+    const currentSession = sessionRef.current;
+    if (!cameraKit || !currentSession) {
       setError('Camera Kit not ready.');
       return;
     }
@@ -168,10 +176,9 @@ const SnapCameraKitPOC = () => {
     try {
       const lens = await cameraKit.lensRepository.loadLens(lensIdToApply, LENS_GROUP_ID);
       if (lens) {
-        await session.applyLens(lens);
+        await currentSession.applyLens(lens);
         console.log(`SnapCameraKitPOC: session.applyLens(${lens.name}) call completed.`);
-        console.log('SnapCameraKitPOC: session.appliedLens after applyLens call:', session.appliedLens);
-        // setCurrentLensName(lens.name); // 'lens:applied' event should handle this
+        console.log('SnapCameraKitPOC: session.appliedLens after applyLens call:', currentSession.appliedLens);
       } else {
         setError(`Failed to load lens: ${lensName}`);
         setCurrentLensName('None');
@@ -186,16 +193,20 @@ const SnapCameraKitPOC = () => {
   };
 
   const clearLens = async () => {
-    if (!session) {
+    const currentSession = sessionRef.current;
+    if (!currentSession) {
       setError('Camera Kit not ready.');
       return;
     }
-    console.log('SnapCameraKitPOC: Attempting to clear lens (UI only).');
-    // True SDK clearLens method is unknown for v1.6.1.
-    // This will just reset UI state. Visual effect may persist.
-    // One might try applying a 'null' lens if supported: await session.applyLens(null);
-    setCurrentLensName('None');
-    console.log('SnapCameraKitPOC: session.appliedLens after UI clear:', session.appliedLens);
+    console.log('SnapCameraKitPOC: Attempting to clear lens via SDK.');
+    try {
+      await currentSession.clearLens();
+      console.log('SnapCameraKitPOC: session.clearLens() call completed.');
+      setCurrentLensName('None');
+    } catch (err) {
+      console.error('SnapCameraKitPOC: Error clearing lens:', err);
+      setError(`Error clearing lens: ${err.message}`);
+    }
   };
 
   return (
@@ -223,12 +234,12 @@ const SnapCameraKitPOC = () => {
             Apply {lens.name}
           </button>
         ))}
-        <button onClick={clearLens} disabled={isLoading || !session}>Clear Lens (UI Only)</button>
+        <button onClick={clearLens} disabled={isLoading || !session}>Clear Lens</button>
       </div>
       <button onClick={() => setCanvasKey(Date.now())} disabled={isLoading}>
         Force Re-initialize Camera & Session
       </button>
-      <p style={{fontSize: '0.8em', color: '#777', marginTop: '10px'}}>Note: 'Clear Lens' currently only resets UI. True visual clearing might require SDK support or session reset.</p>
+      <p style={{fontSize: '0.8em', color: '#777', marginTop: '10px'}}>Note: 'Clear Lens' now uses the official SDK method. Re-initializing should not be necessary for clearing.</p>
       <p style={{ textAlign: 'center', marginTop: '10px' }}>Snap Camera Kit POC</p>
     </div>
   );
