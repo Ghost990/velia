@@ -1,46 +1,109 @@
 {
   "enabled": true,
+  "platform": "8thwall",
   "filters": [
     {
       "id": "wedding_crown",
       "name": "Menyasszonyi korona",
-      "description": "Gyönyörű korona szűrő",
-      "lensId": "wedding-crown-lens",
+      "description": "Gyönyörű arany korona szűrő",
+      "type": "face_attachment",
+      "asset": "crown",
       "category": "wedding",
       "enabled": true,
-      "premium": false
+      "premium": false,
+      "thumbnail": "/assets/filters/crown-thumb.jpg"
     },
     {
       "id": "groom_hat",
       "name": "Vőlegény kalap",
-      "description": "Elegáns kalap szűrő",
-      "lensId": "groom-hat-lens",
+      "description": "Elegáns fekete kalap szűrő",
+      "type": "face_attachment",
+      "asset": "hat",
       "category": "wedding",
       "enabled": true,
-      "premium": false
+      "premium": false,
+      "thumbnail": "/assets/filters/hat-thumb.jpg"
+    },
+    {
+      "id": "wedding_veil",
+      "name": "Menyasszonyi fátyol",
+      "description": "Finom fehér fátyol szűrő",
+      "type": "face_attachment",
+      "asset": "veil",
+      "category": "wedding",
+      "enabled": true,
+      "premium": false,
+      "thumbnail": "/assets/filters/veil-thumb.jpg"
     },
     {
       "id": "wedding_frame",
       "name": "Esküvői keret",
-      "description": "Díszített keret szűrő",
-      "lensId": "wedding-frame-lens",
+      "description": "Díszített arany keret szűrő",
+      "type": "overlay",
+      "asset": "frame",
       "category": "frame",
       "enabled": true,
-      "premium": true
+      "premium": true,
+      "thumbnail": "/assets/filters/frame-thumb.jpg"
     },
     {
       "id": "hearts_sparkles",
       "name": "Szívek és csillogás",
-      "description": "Romantikus szívecskék",
-      "lensId": "hearts-sparkles-lens",
+      "description": "Romantikus lebegő szívecskék",
+      "type": "particles",
+      "asset": "hearts",
+      "animation": "floating",
+      "count": 20,
       "category": "romantic",
       "enabled": true,
-      "premium": false
+      "premium": false,
+      "thumbnail": "/assets/filters/hearts-thumb.jpg"
+    },
+    {
+      "id": "rose_petals",
+      "name": "Rózsaszirom",
+      "description": "Hulló rózsaszirmok",
+      "type": "particles",
+      "asset": "petals",
+      "animation": "falling",
+      "count": 15,
+      "category": "romantic",
+      "enabled": true,
+      "premium": false,
+      "thumbnail": "/assets/filters/petals-thumb.jpg"
+    },
+    {
+      "id": "wedding_rings",
+      "name": "Esküvői gyűrűk",
+      "description": "Csillogó gyűrűk a homlokra",
+      "type": "face_attachment",
+      "asset": "rings",
+      "category": "wedding",
+      "enabled": true,
+      "premium": true,
+      "thumbnail": "/assets/filters/rings-thumb.jpg"
+    },
+    {
+      "id": "love_glow",
+      "name": "Szerelem ragyogás",
+      "description": "Meleg fényhatás az arc körül",
+      "type": "face_effect",
+      "asset": "glow",
+      "category": "romantic",
+      "enabled": true,
+      "premium": false,
+      "thumbnail": "/assets/filters/glow-thumb.jpg"
     }
   ],
   "categories": {
     "wedding": "Esküvői",
     "frame": "Keretek",
     "romantic": "Romantikus"
+  },
+  "settings": {
+    "maxActiveFilters": 1,
+    "enableFaceTracking": true,
+    "enableParticles": true,
+    "particleQuality": "high"
   }
 }

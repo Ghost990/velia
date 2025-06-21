@@ -9,12 +9,15 @@ import {
   SimpleGrid,
   Spinner,
   Alert,
-  AlertIcon
+  AlertIcon,
+  Image,
+  Tooltip
 } from '@chakra-ui/react';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, Heart, Crown, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useFilters } from '../../contexts/FilterContext';
+import { getAvailableWeddingFilters } from '../../services/eighthWall';
 import FilterButton from './FilterButton';
 
 const MotionBox = motion(Box);
@@ -22,170 +25,306 @@ const MotionBox = motion(Box);
 const SnapFilters = ({ onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [weddingFilters, setWeddingFilters] = useState([]);
   const { t } = useTranslation();
   const { availableFilters, activeFilter, applyFilter, removeFilter } = useFilters();
 
   useEffect(() => {
-    // Simulate loading filters
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    loadWeddingFilters();
   }, []);
+
+  const loadWeddingFilters = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Get 8th Wall wedding filters
+      const filters = getAvailableWeddingFilters();
+      setWeddingFilters(filters);
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to load wedding filters:', err);
+      setError('Failed to load wedding filters');
+      setLoading(false);
+    }
+  };
 
   const handleFilterSelect = async (filter) => {
     try {
       if (activeFilter?.id === filter.id) {
         removeFilter();
+        onClose && onClose(null);
       } else {
         applyFilter(filter.id);
+        onClose && onClose(filter.id);
       }
     } catch (error) {
       console.error('Filter application error:', error);
-      setError(t('filters.error'));
+      setError('Failed to apply filter');
     }
+  };
+
+  const getFilterIcon = (filterType) => {
+    switch (filterType) {
+      case 'face_attachment':
+        return Crown;
+      case 'particles':
+        return Heart;
+      case 'overlay':
+        return Camera;
+      default:
+        return Sparkles;
+    }
+  };
+
+  const getCategoryFilters = (category) => {
+    return weddingFilters.filter(filter => filter.category === category);
   };
 
   return (
     <MotionBox
       position="fixed"
-      bottom={0}
-      left={0}
-      right={0}
+      top="0"
+      left="0"
+      right="0"
+      bottom="0"
       bg="blackAlpha.800"
-      backdropFilter="blur(10px)"
-      borderTopRadius="xl"
-      p={4}
-      zIndex={20}
-      initial={{ y: '100%' }}
-      animate={{ y: 0 }}
-      exit={{ y: '100%' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+      zIndex={1000}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
     >
-      <VStack spacing={4} align="stretch">
+      <MotionBox
+        position="absolute"
+        bottom="0"
+        left="0"
+        right="0"
+        bg="white"
+        borderTopRadius="xl"
+        maxH="80vh"
+        overflowY="auto"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 500 }}
+      >
         {/* Header */}
-        <HStack justify="space-between" align="center">
-          <HStack spacing={2}>
-            <Sparkles color="white" size={20} />
-            <Text color="white" fontWeight="bold" fontSize="lg">
-              {t('filters.title')}
-            </Text>
+        <HStack justify="space-between" p={4} borderBottom="1px" borderColor="gray.200">
+          <HStack spacing={3}>
+            <Sparkles size={24} color="#E53E3E" />
+            <VStack align="start" spacing={0}>
+              <Text fontSize="lg" fontWeight="bold">
+                Wedding Filters
+              </Text>
+              <Text fontSize="sm" color="gray.600">
+                Choose your perfect wedding look
+              </Text>
+            </VStack>
           </HStack>
-          
           <IconButton
             icon={<X />}
             variant="ghost"
-            color="white"
-            size="sm"
             onClick={onClose}
-            aria-label="Bezárás"
+            aria-label="Close filters"
           />
         </HStack>
 
-        {/* Loading state */}
-        {loading && (
-          <VStack spacing={3} py={6}>
-            <Spinner color="white" size="lg" />
-            <Text color="white" fontSize="sm">
-              {t('filters.loading')}
-            </Text>
-          </VStack>
-        )}
-
-        {/* Error state */}
-        {error && (
-          <Alert status="error" borderRadius="md">
-            <AlertIcon />
-            {error}
-          </Alert>
-        )}
-
-        {/* Filters grid */}
-        {!loading && !error && (
-          <Box maxH="300px" overflowY="auto">
-            <SimpleGrid columns={4} spacing={3}>
-              {/* No filter option */}
-              <FilterButton
-                filter={{
-                  id: 'none',
-                  name: t('filters.noFilter'),
-                  icon: '✨'
-                }}
-                isActive={!activeFilter}
-                onClick={() => removeFilter()}
-              />
-
-              {/* Available filters */}
-              {availableFilters
-                .filter(filter => filter.enabled)
-                .map((filter) => (
-                  <FilterButton
-                    key={filter.id}
-                    filter={filter}
-                    isActive={activeFilter?.id === filter.id}
-                    onClick={() => handleFilterSelect(filter)}
-                  />
-                ))}
-            </SimpleGrid>
-
-            {/* Filter categories */}
-            <VStack spacing={2} mt={4} align="start">
-              <Text color="whiteAlpha.700" fontSize="xs" fontWeight="semibold">
-                Népszerű szűrők
-              </Text>
-              
-              <HStack spacing={2} flexWrap="wrap">
-                {availableFilters
-                  .filter(f => f.category === 'wedding')
-                  .slice(0, 3)
-                  .map(filter => (
-                    <Badge
-                      key={filter.id}
-                      colorScheme="rose"
-                      variant="subtle"
-                      fontSize="xs"
-                      px={2}
-                      py={1}
-                    >
-                      {filter.name}
-                    </Badge>
-                  ))}
-              </HStack>
+        {/* Content */}
+        <Box p={4}>
+          {loading && (
+            <VStack spacing={4} py={8}>
+              <Spinner size="lg" color="pink.500" />
+              <Text>Loading wedding filters...</Text>
             </VStack>
-          </Box>
-        )}
+          )}
 
-        {/* Active filter info */}
-        {activeFilter && (
-          <MotionBox
-            bg="rose.500"
-            color="white"
-            p={3}
-            borderRadius="md"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <HStack justify="space-between">
-              <VStack align="start" spacing={1}>
-                <Text fontWeight="bold" fontSize="sm">
-                  {activeFilter.name}
-                </Text>
-                <Text fontSize="xs" opacity={0.8}>
-                  {activeFilter.description}
-                </Text>
-              </VStack>
-              
-              {activeFilter.premium && (
-                <Badge colorScheme="gold" variant="solid">
-                  Premium
-                </Badge>
+          {error && (
+            <Alert status="error" mb={4}>
+              <AlertIcon />
+              {error}
+            </Alert>
+          )}
+
+          {!loading && !error && (
+            <VStack spacing={6} align="stretch">
+              {/* Wedding Category */}
+              <Box>
+                <HStack spacing={2} mb={3}>
+                  <Crown size={20} color="#D69E2E" />
+                  <Text fontSize="md" fontWeight="semibold">
+                    Wedding Essentials
+                  </Text>
+                  <Badge colorScheme="gold" variant="subtle">
+                    {getCategoryFilters('wedding').length}
+                  </Badge>
+                </HStack>
+                <SimpleGrid columns={3} spacing={3}>
+                  {getCategoryFilters('wedding').map((filter) => {
+                    const Icon = getFilterIcon(filter.type);
+                    const isActive = activeFilter?.id === filter.id;
+                    
+                    return (
+                      <Tooltip key={filter.id} label={filter.description} placement="top">
+                        <MotionBox
+                          bg={isActive ? "pink.500" : "gray.100"}
+                          color={isActive ? "white" : "gray.700"}
+                          p={3}
+                          borderRadius="lg"
+                          cursor="pointer"
+                          textAlign="center"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleFilterSelect(filter)}
+                          border={isActive ? "2px solid" : "2px solid transparent"}
+                          borderColor={isActive ? "pink.300" : "transparent"}
+                        >
+                          <VStack spacing={2}>
+                            <Icon size={24} />
+                            <Text fontSize="xs" fontWeight="medium">
+                              {filter.name}
+                            </Text>
+                            {filter.premium && (
+                              <Badge size="sm" colorScheme="yellow">
+                                Premium
+                              </Badge>
+                            )}
+                          </VStack>
+                        </MotionBox>
+                      </Tooltip>
+                    );
+                  })}
+                </SimpleGrid>
+              </Box>
+
+              {/* Romantic Category */}
+              <Box>
+                <HStack spacing={2} mb={3}>
+                  <Heart size={20} color="#E53E3E" />
+                  <Text fontSize="md" fontWeight="semibold">
+                    Romantic Effects
+                  </Text>
+                  <Badge colorScheme="pink" variant="subtle">
+                    {getCategoryFilters('romantic').length}
+                  </Badge>
+                </HStack>
+                <SimpleGrid columns={3} spacing={3}>
+                  {getCategoryFilters('romantic').map((filter) => {
+                    const Icon = getFilterIcon(filter.type);
+                    const isActive = activeFilter?.id === filter.id;
+                    
+                    return (
+                      <Tooltip key={filter.id} label={filter.description} placement="top">
+                        <MotionBox
+                          bg={isActive ? "pink.500" : "gray.100"}
+                          color={isActive ? "white" : "gray.700"}
+                          p={3}
+                          borderRadius="lg"
+                          cursor="pointer"
+                          textAlign="center"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleFilterSelect(filter)}
+                          border={isActive ? "2px solid" : "2px solid transparent"}
+                          borderColor={isActive ? "pink.300" : "transparent"}
+                        >
+                          <VStack spacing={2}>
+                            <Icon size={24} />
+                            <Text fontSize="xs" fontWeight="medium">
+                              {filter.name}
+                            </Text>
+                            {filter.premium && (
+                              <Badge size="sm" colorScheme="yellow">
+                                Premium
+                              </Badge>
+                            )}
+                          </VStack>
+                        </MotionBox>
+                      </Tooltip>
+                    );
+                  })}
+                </SimpleGrid>
+              </Box>
+
+              {/* Frame Category */}
+              <Box>
+                <HStack spacing={2} mb={3}>
+                  <Camera size={20} color="#3182CE" />
+                  <Text fontSize="md" fontWeight="semibold">
+                    Photo Frames
+                  </Text>
+                  <Badge colorScheme="blue" variant="subtle">
+                    {getCategoryFilters('frame').length}
+                  </Badge>
+                </HStack>
+                <SimpleGrid columns={3} spacing={3}>
+                  {getCategoryFilters('frame').map((filter) => {
+                    const Icon = getFilterIcon(filter.type);
+                    const isActive = activeFilter?.id === filter.id;
+                    
+                    return (
+                      <Tooltip key={filter.id} label={filter.description} placement="top">
+                        <MotionBox
+                          bg={isActive ? "pink.500" : "gray.100"}
+                          color={isActive ? "white" : "gray.700"}
+                          p={3}
+                          borderRadius="lg"
+                          cursor="pointer"
+                          textAlign="center"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleFilterSelect(filter)}
+                          border={isActive ? "2px solid" : "2px solid transparent"}
+                          borderColor={isActive ? "pink.300" : "transparent"}
+                        >
+                          <VStack spacing={2}>
+                            <Icon size={24} />
+                            <Text fontSize="xs" fontWeight="medium">
+                              {filter.name}
+                            </Text>
+                            {filter.premium && (
+                              <Badge size="sm" colorScheme="yellow">
+                                Premium
+                              </Badge>
+                            )}
+                          </VStack>
+                        </MotionBox>
+                      </Tooltip>
+                    );
+                  })}
+                </SimpleGrid>
+              </Box>
+
+              {/* Clear Filter Option */}
+              {activeFilter && (
+                <MotionBox
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Box
+                    bg="gray.50"
+                    p={3}
+                    borderRadius="lg"
+                    cursor="pointer"
+                    textAlign="center"
+                    onClick={() => handleFilterSelect({ id: null })}
+                    border="2px dashed"
+                    borderColor="gray.300"
+                  >
+                    <VStack spacing={2}>
+                      <X size={24} color="#666" />
+                      <Text fontSize="sm" fontWeight="medium" color="gray.600">
+                        Remove Filter
+                      </Text>
+                    </VStack>
+                  </Box>
+                </MotionBox>
               )}
-            </HStack>
-          </MotionBox>
-        )}
-      </VStack>
+            </VStack>
+          )}
+        </Box>
+      </MotionBox>
     </MotionBox>
   );
 };

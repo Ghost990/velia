@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useConfig } from './ConfigContext';
+import { getAvailableWeddingFilters, applyWeddingFilter, removeWeddingFilter } from '../services/eighthWall';
+import filtersConfig from '../config/filters.config.json';
 
 const FilterContext = createContext();
 
@@ -12,51 +13,152 @@ export const useFilters = () => {
 };
 
 export const FilterProvider = ({ children }) => {
-  const [activeFilter, setActiveFilter] = useState(null);
   const [availableFilters, setAvailableFilters] = useState([]);
+  const [activeFilter, setActiveFilter] = useState(null);
   const [filterStats, setFilterStats] = useState({});
-  const { config } = useConfig();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Load available filters on mount
   useEffect(() => {
-    if (config.filters) {
-      setAvailableFilters(config.filters.filters || []);
-    }
-  }, [config]);
+    loadAvailableFilters();
+  }, []);
 
-  const applyFilter = (filterId) => {
-    const filter = availableFilters.find(f => f.id === filterId);
-    if (filter && filter.enabled) {
-      setActiveFilter(filter);
-      updateFilterStats(filterId);
+  const loadAvailableFilters = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Get 8th Wall wedding filters
+      const weddingFilters = getAvailableWeddingFilters();
+      
+      // Merge with config filters for additional metadata
+      const enhancedFilters = weddingFilters.map(filter => {
+        const configFilter = filtersConfig.filters.find(f => f.id === filter.id);
+        return {
+          ...filter,
+          ...configFilter, // Merge config data (descriptions, thumbnails, etc.)
+          enabled: configFilter?.enabled !== false, // Default to enabled
+          premium: configFilter?.premium || false,
+          stats: filterStats[filter.id] || { uses: 0, rating: 0 }
+        };
+      });
+
+      setAvailableFilters(enhancedFilters);
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Failed to load filters:', err);
+      setError(err.message);
+      setIsLoading(false);
     }
   };
 
-  const removeFilter = () => {
-    setActiveFilter(null);
+  const applyFilter = async (filterId) => {
+    try {
+      if (!filterId) {
+        removeFilter();
+        return;
+      }
+
+      const filter = availableFilters.find(f => f.id === filterId);
+      if (!filter) {
+        throw new Error(`Filter ${filterId} not found`);
+      }
+
+      // Apply the 8th Wall filter
+      const success = await applyWeddingFilter(filter);
+      
+      if (success) {
+        setActiveFilter(filter);
+        
+        // Update filter usage stats
+        updateFilterStats(filterId, { 
+          uses: (filterStats[filterId]?.uses || 0) + 1,
+          lastUsed: new Date().toISOString()
+        });
+        
+        console.log(`Applied filter: ${filter.name}`);
+      } else {
+        throw new Error('Failed to apply filter');
+      }
+    } catch (err) {
+      console.error('Filter application error:', err);
+      setError(err.message);
+      throw err;
+    }
   };
 
-  const updateFilterStats = (filterId) => {
+  const removeFilter = async () => {
+    try {
+      if (activeFilter) {
+        await removeWeddingFilter();
+        setActiveFilter(null);
+        console.log('Filter removed');
+      }
+    } catch (err) {
+      console.error('Filter removal error:', err);
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const updateFilterStats = (filterId, newStats) => {
     setFilterStats(prev => ({
       ...prev,
-      [filterId]: (prev[filterId] || 0) + 1
+      [filterId]: {
+        ...prev[filterId],
+        ...newStats
+      }
     }));
   };
 
-  const getPopularFilters = () => {
-    return Object.entries(filterStats)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 5)
-      .map(([id]) => availableFilters.find(f => f.id === id))
-      .filter(Boolean);
+  const getFiltersByCategory = (category) => {
+    return availableFilters.filter(filter => 
+      filter.category === category && filter.enabled
+    );
+  };
+
+  const getPopularFilters = (limit = 5) => {
+    return availableFilters
+      .filter(filter => filter.enabled)
+      .sort((a, b) => (filterStats[b.id]?.uses || 0) - (filterStats[a.id]?.uses || 0))
+      .slice(0, limit);
+  };
+
+  const searchFilters = (query) => {
+    const lowercaseQuery = query.toLowerCase();
+    return availableFilters.filter(filter =>
+      filter.enabled && (
+        filter.name.toLowerCase().includes(lowercaseQuery) ||
+        filter.description?.toLowerCase().includes(lowercaseQuery) ||
+        filter.category.toLowerCase().includes(lowercaseQuery)
+      )
+    );
   };
 
   const value = {
-    activeFilter,
+    // State
     availableFilters,
+    activeFilter,
     filterStats,
+    isLoading,
+    error,
+    
+    // Actions
     applyFilter,
     removeFilter,
-    getPopularFilters
+    updateFilterStats,
+    loadAvailableFilters,
+    
+    // Utilities
+    getFiltersByCategory,
+    getPopularFilters,
+    searchFilters,
+    
+    // Categories
+    weddingFilters: getFiltersByCategory('wedding'),
+    romanticFilters: getFiltersByCategory('romantic'),
+    frameFilters: getFiltersByCategory('frame'),
   };
 
   return (
