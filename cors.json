@@ -8,7 +8,8 @@
       "http://127.0.0.1:5174",
       "https://localhost:5174",
       "https://krisztidani.firebaseapp.com",
-      "https://krisztidani.web.app"
+      "https://krisztidani.web.app",
+      "http://localhost:5178"
     ],
     "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     "maxAgeSeconds": 3600,
