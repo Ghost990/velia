@@ -52,6 +52,9 @@ import { setupDebugHelpers } from './debug-helper';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import UploadService from '../../services/uploadService';
+import GallerySkeleton from './GallerySkeleton';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 const MotionBox = motion(Box);
 const MotionImage = motion(Image);
@@ -68,6 +71,7 @@ const Gallery = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState('grid');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [isDownloading, setIsDownloading] = useState(false);
   
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isOptimizationModalOpen, onOpen: onOptimizationModalOpen, onClose: onOptimizationModalClose } = useDisclosure(); // For a simple optimization progress modal
@@ -239,6 +243,85 @@ const Gallery = () => {
       }
     } catch (error) {
       console.error('Sharing failed:', error);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    if (filteredMedia.length === 0) {
+      toast({
+        title: 'Nincs letölthető kép',
+        status: 'info',
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    const downloadToastId = toast({
+      title: 'Letöltés előkészítése...',
+      description: 'A képek összegyűjtése folyamatban.',
+      status: 'loading',
+      duration: null,
+      isClosable: false,
+    });
+
+    const zip = new JSZip();
+    let filesToZip = 0;
+
+    try {
+      await Promise.all(
+        filteredMedia.map(async (mediaItem) => {
+          const url = mediaItem.originalUrl || mediaItem.optimizedUrl;
+          if (!url) {
+            console.warn('Skipping media item with no URL:', mediaItem.id);
+            return;
+          }
+          try {
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch ${url}`);
+            }
+            const blob = await response.blob();
+            const fileName = mediaItem.originalFileName || `${mediaItem.id}.jpg`;
+            zip.file(fileName, blob);
+            filesToZip++;
+          } catch (fetchError) {
+            console.error(`Could not fetch ${url}:`, fetchError);
+          }
+        })
+      );
+
+      if (filesToZip === 0) {
+        throw new Error('Egyetlen képet sem sikerült letölteni.');
+      }
+      
+      toast.update(downloadToastId, {
+        title: `Tömörítés (${filesToZip} kép)...`,
+        description: 'Ez eltarthat egy ideig. Kérlek, ne zárd be az ablakot.',
+      });
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const brideName = config.wedding?.couple?.bride || 'gallery';
+      const groomName = config.wedding?.couple?.groom || 'download';
+      const date = new Date().toISOString().split('T')[0];
+      saveAs(zipBlob, `${brideName}-${groomName}-gallery-${date}.zip`);
+
+      toast.close(downloadToastId);
+      toast({
+        title: 'Letöltés elindítva!',
+        status: 'success',
+        duration: 4000,
+      });
+    } catch (error) {
+      toast.close(downloadToastId);
+      toast({
+        title: 'Hiba történt a letöltés során',
+        description: error.message,
+        status: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -419,6 +502,8 @@ const Gallery = () => {
     handleLegacyUpload();
   }, [location.state]);
 
+
+
   if (!canViewGallery) {
     return (
       <Box minH="100vh" bg="linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #f3e8ff 100%)">
@@ -506,6 +591,16 @@ const Gallery = () => {
                   loadingText={`${Math.round(uploadProgress)}%`}
                 >
                   Feltöltés
+                </Button>
+                <Button
+                  leftIcon={<Download />}
+                  colorScheme="green"
+                  onClick={handleDownloadAll}
+                  isLoading={isDownloading}
+                  loadingText="Tömörítés..."
+                  isDisabled={filteredMedia.length === 0}
+                >
+                  Összes letöltése
                 </Button>
                 <input
                   type="file"
@@ -596,175 +691,174 @@ const Gallery = () => {
 
       {/* Content */}
       <Container maxW="container.xl" py={8}>
-        {/* Drag & Drop Overlay */}
-        {dragActive && (
-          <Box
-            position="fixed"
-            top={0}
-            left={0}
-            right={0}
-            bottom={0}
-            bg="blackAlpha.600"
-            backdropFilter="blur(5px)"
-            zIndex={1000}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            flexDirection="column"
-          >
-            <Box
-              bg="white"
-              p={10}
-              borderRadius="xl"
-              boxShadow="xl"
-              textAlign="center"
-              maxW="md"
-              w="full"
-            >
-              <VStack spacing={6}>
-                <Box fontSize="5xl">📸</Box>
-                <Heading size="lg">Húzd ide a képeket</Heading>
-                <Text color="gray.600">Engedd el a képeket a feltöltéshez</Text>
-              </VStack>
-            </Box>
-          </Box>
-        )}
-        
-        {/* Upload Progress */}
-        {isUploading && (
-          <Box mb={6} bg="white" p={4} borderRadius="lg" boxShadow="sm">
-            <VStack spacing={3} align="stretch">
-              <HStack justify="space-between">
-                <Text fontWeight="medium">Feltöltés folyamatban...</Text>
-                <Text>{Math.round(uploadProgress)}%</Text>
-              </HStack>
-              <Progress
-                value={uploadProgress}
-                size="sm"
-                colorScheme="rose"
-                borderRadius="full"
-              />
-            </VStack>
-          </Box>
-        )}
         {loading ? (
-          <VStack spacing={4} py={20}>
-            <Spinner size="xl" color="rose.500" />
-            <Text color="gray.600">Galéria betöltése...</Text>
-          </VStack>
-        ) : filteredMedia.length === 0 ? (
-          <VStack spacing={6} py={20} textAlign="center">
-            <Box fontSize="4xl">📷</Box>
-            <Heading size="md" color="gray.600">
-              {searchTerm || filterType !== 'all' || selectedFilter !== 'all' 
-                ? 'Nincs találat a keresési feltételekre'
-                : t('gallery.empty')
-              }
-            </Heading>
-            <Button 
-              leftIcon={<Camera />}
-              colorScheme="rose"
-              onClick={() => navigate('/camera')}
-            >
-              Első fotó feltöltése
-            </Button>
-          </VStack>
+          <GallerySkeleton />
         ) : (
-          // console.log('Gallery JSX: Rendering filteredMedia. Length:', filteredMedia.length, 'Content:', filteredMedia),
-          <SimpleGrid 
-            columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} 
-            spacing={4}
-          >
-            <AnimatePresence>
-              {filteredMedia.map((mediaItem, index) => {
-                const pathToLog = mediaItem.optimization?.variants?.preview || mediaItem.optimizedUrl;
-                // console.log(`Gallery: MOTION WRAPPED RENDER for ${mediaItem.id}, storagePath:`, pathToLog, 'Full mediaItem:', mediaItem);
-                // console.log('Gallery: FirebaseImage component reference just before use:', FirebaseImage);
-                if (!pathToLog) {
-                  // Placeholder rendering
-                  return (
-                    <MotionBox
-                      key={`${mediaItem.id}-placeholder`}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                    >
-                      <Box
-                        bg="gray.100"
-                        borderRadius="xl"
-                        overflow="hidden"
-                        boxShadow="sm"
-                        h="280px"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <Text color="gray.500">Image Unavailable</Text>
-                      </Box>
-                    </MotionBox>
-                  );
-                } else {
-                  // Actual image rendering with FirebaseImage
-                  return (
-                    <MotionBox
-                      key={mediaItem.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      whileHover={{ scale: 1.05 }}
-                      cursor="pointer"
-                      onClick={() => handleMediaClick(mediaItem)}
-                      className="group" // For potential group hover effects
-                    >
-                      <Box
-                        bg="white"
-                        borderRadius="xl"
-                        overflow="hidden"
-                        boxShadow="sm"
-                        _hover={{ boxShadow: 'md' }}
-                        transition="all 0.2s"
-                        position="relative"
-                        h="280px"
-                      >
-                        <FirebaseImage
-                          storagePath={pathToLog}
-                          imageProps={{
-                            w: '100%',
-                            h: '100%',
-                            objectFit: 'cover',
-                          }}
-                        />
-                        <Box
-                          position="absolute"
-                          bottom="0"
-                          left="0"
-                          right="0"
-                          bg="rgba(0,0,0,0.7)"
-                          color="white"
-                          p={2}
-                          opacity={0}
-                          _groupHover={{ opacity: 1 }} // Show on parent MotionBox hover
-                          transition="opacity 0.3s ease-in-out"
+          <>
+            {/* Drag & Drop Overlay */}
+            {dragActive && (
+              <Box
+                position="fixed"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                bg="blackAlpha.600"
+                backdropFilter="blur(5px)"
+                zIndex={1000}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                flexDirection="column"
+              >
+                <Box
+                  bg="white"
+                  p={10}
+                  borderRadius="xl"
+                  boxShadow="xl"
+                  textAlign="center"
+                  maxW="md"
+                  w="full"
+                >
+                  <VStack spacing={6}>
+                    <Box fontSize="5xl">📸</Box>
+                    <Heading size="lg">Húzd ide a képeket</Heading>
+                    <Text color="gray.600">Engedd el a képeket a feltöltéshez</Text>
+                  </VStack>
+                </Box>
+              </Box>
+            )}
+            
+            {/* Upload Progress */}
+            {isUploading && (
+              <Box mb={6} bg="white" p={4} borderRadius="lg" boxShadow="sm">
+                <VStack spacing={3} align="stretch">
+                  <HStack justify="space-between">
+                    <Text fontWeight="medium">Feltöltés folyamatban...</Text>
+                    <Text>{Math.round(uploadProgress)}%</Text>
+                  </HStack>
+                  <Progress
+                    value={uploadProgress}
+                    size="sm"
+                    colorScheme="rose"
+                    borderRadius="full"
+                  />
+                </VStack>
+              </Box>
+            )}
+            
+            {filteredMedia.length === 0 ? (
+              <VStack spacing={6} py={20} textAlign="center">
+                <Box fontSize="4xl">📷</Box>
+                <Heading size="md" color="gray.600">
+                  {searchTerm || filterType !== 'all' || selectedFilter !== 'all' 
+                    ? 'Nincs találat a keresési feltételekre'
+                    : t('gallery.empty')
+                  }
+                </Heading>
+                <Button 
+                  leftIcon={<Camera />}
+                  colorScheme="rose"
+                  onClick={() => navigate('/camera')}
+                >
+                  Első fotó feltöltése
+                </Button>
+              </VStack>
+            ) : (
+              <SimpleGrid 
+                columns={{ base: 1, sm: 2, md: 3, lg: 4, xl: 5 }} 
+                spacing={4}
+              >
+                <AnimatePresence>
+                  {filteredMedia.map((mediaItem, index) => {
+                    const pathToLog = mediaItem.optimization?.variants?.preview || mediaItem.optimizedUrl;
+                    if (!pathToLog) {
+                      // Placeholder rendering
+                      return (
+                        <MotionBox
+                          key={`${mediaItem.id}-placeholder`}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
                         >
-                          <Text fontSize="sm" fontWeight="semibold" noOfLines={1}>
-                            {mediaItem.originalFileName || mediaItem.fileName || 'Untitled'}
-                          </Text>
-                          {mediaItem.uploadDate?.seconds && (
-                            <Text fontSize="xs">
-                              {new Date(mediaItem.uploadDate.seconds * 1000).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
-                            </Text>
-                          )}
-                        </Box>
-                      </Box>
-                    </MotionBox>
-                  );
-                }
+                          <Box
+                            bg="gray.100"
+                            borderRadius="xl"
+                            overflow="hidden"
+                            boxShadow="sm"
+                            h="280px"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                          >
+                            <Text color="gray.500">Image Unavailable</Text>
+                          </Box>
+                        </MotionBox>
+                      );
+                    } else {
+                      // Actual image rendering with FirebaseImage
+                      return (
+                        <MotionBox
+                          key={mediaItem.id}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                          whileHover={{ scale: 1.05 }}
+                          cursor="pointer"
+                          onClick={() => handleMediaClick(mediaItem)}
+                          className="group" // For potential group hover effects
+                        >
+                          <Box
+                            bg="white"
+                            borderRadius="xl"
+                            overflow="hidden"
+                            boxShadow="sm"
+                            _hover={{ boxShadow: 'md' }}
+                            transition="all 0.2s"
+                            position="relative"
+                            h="280px"
+                          >
+                            <FirebaseImage
+                              storagePath={pathToLog}
+                              imageProps={{
+                                w: '100%',
+                                h: '100%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                            <Box
+                              position="absolute"
+                              bottom="0"
+                              left="0"
+                              right="0"
+                              bg="rgba(0,0,0,0.7)"
+                              color="white"
+                              p={2}
+                              opacity={0}
+                              _groupHover={{ opacity: 1 }} // Show on parent MotionBox hover
+                              transition="opacity 0.3s ease-in-out"
+                            >
+                              <Text fontSize="sm" fontWeight="semibold" noOfLines={1}>
+                                {mediaItem.originalFileName || mediaItem.fileName || 'Untitled'}
+                              </Text>
+                              {mediaItem.uploadDate?.seconds && (
+                                <Text fontSize="xs">
+                                  {new Date(mediaItem.uploadDate.seconds * 1000).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </Text>
+                              )}
+                            </Box>
+                          </Box>
+                        </MotionBox>
+                      );
+                    }
 
-              })}
-            </AnimatePresence>
-          </SimpleGrid>
+                  })}
+                </AnimatePresence>
+              </SimpleGrid>
+            )}
+          </>
         )}
       </Container>
 
@@ -798,7 +892,7 @@ const Gallery = () => {
                     <video
                       src={selectedMedia.originalUrl}
                       controls
-                      style={{ maxWidth: '100%', maxHeight: '100%' }}
+                      style={{ maxWidth: '100%', maxHeight: '80vh' }}
                     />
                   )}
                 </Box>

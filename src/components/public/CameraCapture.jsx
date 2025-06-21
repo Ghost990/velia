@@ -25,6 +25,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { useFilters } from '../../contexts/FilterContext';
 import { useImageOptimization } from '../../hooks/useImageOptimization';
 import SnapFilters from './SnapFilters';
+import SnapCameraKitPOC from '../camera/SnapCameraKitPOC'; // Import the POC component
 import ImageOptimizer from './ImageOptimizer';
 import UploadProgress from './UploadProgress';
 
@@ -40,8 +41,8 @@ const CameraCapture = () => {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  // videoRef will be effectively replaced by SnapCameraKitPOC's internal canvas
+  const canvasRef = useRef(null); // This ref might need to be re-purposed or SnapCameraKitPOC's canvas used for capture
   const mediaRecorderRef = useRef(null);
   const recordedChunks = useRef([]);
   
@@ -51,38 +52,28 @@ const CameraCapture = () => {
   const { activeFilter } = useFilters();
   const { optimizeSingle } = useImageOptimization();
 
+  // useEffect for initializeCamera and initializeCamera itself are removed.
+  // SnapCameraKitPOC will handle its own camera initialization.
+  // The `stream` state might also become redundant or managed differently.
   useEffect(() => {
-    initializeCamera();
+    // If any cleanup related to CameraCapture itself (not the stream managed by POC) is needed, it can go here.
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      // Example: if (stream && !snapKitIsManagingStream) stream.getTracks().forEach(track => track.stop());
     };
   }, []);
-
-  const initializeCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 1280, height: 720 },
-        audio: mediaType === 'video'
-      });
-      
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-      setCameraError('');
-    } catch (error) {
-      console.error('Camera access error:', error);
-      setCameraError(t('camera.permissionRequest'));
-    }
-  };
 
   const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const video = videoRef.current;
+    // const video = videoRef.current; // This will change. We'll need to get image data from SnapCameraKitPOC's canvas.
+    // For now, photo capture will be temporarily affected. We'll address this after POC rendering is confirmed.
+    const video = document.querySelector('#snap-camera-kit-canvas'); // Placeholder, this ID needs to be on SnapCameraKitPOC's canvas
+    if (!video) {
+      console.error('SnapCameraKitPOC canvas not found for capturePhoto');
+      toast({ title: 'Capture Error', description: 'Camera canvas not ready.', status: 'error'});
+      return;
+    }
     const ctx = canvas.getContext('2d');
 
     canvas.width = video.videoWidth;
@@ -105,6 +96,13 @@ const CameraCapture = () => {
 
     try {
       recordedChunks.current = [];
+      // Video recording will also need to be adapted to use the stream from SnapCameraKit or its output.
+      // This will be temporarily affected.
+      if (!stream) {
+        console.error('Stream not available for video recording. SnapCameraKitPOC needs to provide it or handle recording.');
+        toast({ title: 'Recording Error', description: 'Camera stream not ready.', status: 'error'});
+        return;
+      }
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp8,opus'
       });
@@ -276,24 +274,14 @@ const CameraCapture = () => {
         </HStack>
       </Box>
 
-      {/* Camera view */}
+      {/* Camera view - Replaced with SnapCameraKitPOC */}
       <Box position="relative" w="100%" h="100vh">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transform: 'scaleX(-1)' // Mirror for selfie mode
-          }}
-        />
+        <SnapCameraKitPOC /> {/* Render the SnapCameraKitPOC component here */}
         
+        {/* The canvasRef for photo capture might need to be associated with SnapCameraKitPOC's output or removed if capture is handled differently */}
         <canvas
           ref={canvasRef}
-          style={{ display: 'none' }}
+          style={{ display: 'none' }} /* This canvas is currently for the old photo capture method */
         />
 
         {/* Active filter indicator */}
